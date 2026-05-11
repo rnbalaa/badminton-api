@@ -155,10 +155,12 @@
         const time = new Date(s.claimedAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         html += `<div class="spot-row ${cls}"><span>${s.name}</span><span class="small">${time}</span></div>`;
       }
-      for (const s of cancelled) {
-        const time = new Date(s.claimedAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        html += `<div class="spot-row spot-blue"><span>${s.name}</span><span class="small">${time}</span></div>`;
-      }
+      
+for (const s of cancelled) {
+  const claimTime = new Date(s.claimedAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const cancelTime = new Date(s.cancelledAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  html += `<div class="spot-row spot-blue"><span>${s.name}</span><span class="small">${claimTime} (cancelled ${cancelTime})</span></div>`;
+}
       if (html === '') {
         html = '<p style="text-align:center;color:#888;">No spots claimed yet. Be the first!</p>';
         statusMsg.className = 'status-msg loading';
