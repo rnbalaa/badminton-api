@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Badminton Poll – Register</title>
+  <style>
+    body {
+      font-family: -apple-system, 'Segoe UI', sans-serif;
+      background: #c8e6c9;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 { color: #1e1e1e; margin-bottom: 5px; }
+    .subtitle { color: #555; margin-bottom: 20px; }
+    .card {
+      background: white;
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+      max-width: 360px;
+      width: 100%;
+    }
+    .names-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 50vh;
+      overflow-y: auto;
+    }
+    .name-btn {
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 2px solid #ddd;
+      background: white;
+      font-size: 1rem;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .name-btn:disabled {
+      background: #f0f0f0;
+      color: #aaa;
+      border-color: #eee;
+      cursor: not-allowed;
+      text-decoration: line-through;
+    }
+    .name-btn:not(:disabled):hover {
+      background: #e8f5e9;
+      border-color: #2e7d32;
+    }
+    .result {
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 10px;
+      text-align: center;
+      font-weight: 500;
+    }
+    .result.success { background: #e8f5e9; color: #2e7d32; }
+    .result.error { background: #ffebee; color: #c62828; }
+    .logo {
+      width: 60px; height: 60px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <!-- The final logo SVG (tight white panel + deep shadow) -->
+  <svg class="logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <filter id="panelShadow" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000" flood-opacity="0.35"/>
+      </filter>
+      <filter id="iconShadow" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="2" dy="4" stdDeviation="3" flood-color="#000" flood-opacity="0.4"/>
+      </filter>
+      <linearGradient id="drop" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#f2f9ff"/>
+        <stop offset="100%" stop-color="#b8d8f8"/>
+      </linearGradient>
+    </defs>
+    <rect x="15" y="15" width="70" height="70" rx="18" fill="white" filter="url(#panelShadow)"/>
+    <g transform="translate(50,50) scale(0.6) translate(-50,-50)">
+      <circle cx="50" cy="50" r="34" fill="url(#drop)" stroke="#e63946" stroke-width="7" filter="url(#iconShadow)"/>
+      <ellipse cx="40" cy="33" rx="6" ry="4" fill="white" opacity="0.5" transform="rotate(-25, 40, 33)"/>
+      <circle cx="44" cy="29" r="1.5" fill="white" opacity="0.8"/>
+      <text font-size="28" x="44" y="50" dominant-baseline="central" text-anchor="middle" font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji">🗳️</text>
+      <text font-size="28" x="56" y="50" dominant-baseline="central" text-anchor="middle" font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji">🏸</text>
+    </g>
+  </svg>
+
+  <h1>Badminton Poll</h1>
+  <p class="subtitle">Tap your name to register (once only)</p>
+
+  <div class="card">
+    <div id="status" class="result" style="display:none;"></div>
+    <div id="namesContainer" class="names-list">Loading…</div>
+  </div>
+
+  <script>
+    // 🔧 CHANGE THIS to your Render API URL (e.g., 'https://badminton-api.onrender.com')
+    const API = 'https://pollapp-rlmm.onrender.com';
+
+    const namesContainer = document.getElementById('namesContainer');
+    const statusDiv = document.getElementById('status');
+
+    async function loadNames() {
+      try {
+        const res = await fetch(`${API}/available-names`);
+        const data = await res.json();
+        renderNames(data.available, data.claimed, data.total);
+      } catch (err) {
+        namesContainer.innerHTML = '<p style="color:#c62828;">⚠️ Could not load names. Check API URL.</p>';
+      }
+    }
+
+    function renderNames(available, claimedCount, total) {
+      if (available.length === 0) {
+        namesContainer.innerHTML = '<p style="text-align:center;color:#888;">All names claimed! 🎉</p>';
+        return;
+      }
+      namesContainer.innerHTML = available.map(name =>
+        `<button class="name-btn" onclick="claim('${name}')">${name}</button>`
+      ).join('');
+    }
+
+    async function claim(name) {
+      try {
+        const res = await fetch(`${API}/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          localStorage.setItem('voterToken', data.token);
+          localStorage.setItem('voterName', data.name);
+          statusDiv.style.display = 'block';
+          statusDiv.className = 'result success';
+          statusDiv.textContent = `✅ You're all set, ${data.name}! You can now vote in any poll.`;
+          setTimeout(loadNames, 1500);
+        } else {
+          statusDiv.style.display = 'block';
+          statusDiv.className = 'result error';
+          statusDiv.textContent = data.error || 'Registration failed.';
+        }
+      } catch (err) {
+        statusDiv.style.display = 'block';
+        statusDiv.className = 'result error';
+        statusDiv.textContent = 'Connection error. Check the API URL.';
+      }
+    }
+
+    loadNames();
+  </script>
+</body>
+</html>
