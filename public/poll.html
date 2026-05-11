@@ -107,122 +107,139 @@
     <div id="spotsContainer" class="spots-list"></div>
   </div>
 
-  <script>
-    const API = 'https://pollapp-rlmm.onrender.com';
-    const token = localStorage.getItem('voterToken');
-    const voterName = localStorage.getItem('voterName');
+<script>
+  const API = 'https://pollapp-rlmm.onrender.com';
+  const token = localStorage.getItem('voterToken');
+  const voterName = localStorage.getItem('voterName');
 
-    const statusMsg = document.getElementById('statusMsg');
-    const claimBtn = document.getElementById('claimBtn');
-    const cancelBtn = document.getElementById('cancelBtn');
-    const spotsContainer = document.getElementById('spotsContainer');
-    const pollTitle = document.getElementById('pollTitle');
+  const statusMsg = document.getElementById('statusMsg');
+  const claimBtn = document.getElementById('claimBtn');
+  const cancelBtn = document.getElementById('cancelBtn');
+  const spotsContainer = document.getElementById('spotsContainer');
+  const pollTitle = document.getElementById('pollTitle');
 
-    async function loadPoll() {
-      try {
-        const res = await fetch(`${API}/current-poll`);
-        const poll = await res.json();
-        if (!poll.exists) {
-          statusMsg.className = 'status-msg loading';
-          statusMsg.textContent = 'No active poll. Check back later.';
-          return;
-        }
-        pollTitle.textContent = poll.title;
-        renderSpots(poll.spots, poll.capacity);
-        updateButtons(poll.spots);
-      } catch (err) {
-        statusMsg.className = 'status-msg error';
-        statusMsg.textContent = 'Could not load poll.';
-      }
-    }
-
-    function renderSpots(spots, capacity) {
-      const confirmed = spots.filter(s => !s.cancelled);
-      const cancelled = spots.filter(s => s.cancelled);
-      
-      let html = '';
-      // Show confirmed (green for first <capacity> spots, amber for rest)
-      for (let i = 0; i < confirmed.length; i++) {
-        const s = confirmed[i];
-        const cls = i < capacity ? 'spot-green' : 'spot-amber';
-        const time = new Date(s.claimedAt).toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
-        html += `<div class="spot-row ${cls}"><span>${s.name}</span><span class="small">${time}</span></div>`;
-      }
-      // Show cancelled (blue strikethrough)
-      for (const s of cancelled) {
-        const time = new Date(s.claimedAt).toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
-        html += `<div class="spot-row spot-blue"><span>${s.name}</span><span class="small">${time}</span></div>`;
-      }
-      
-      if (html === '') {
-        html = '<p style="text-align:center;color:#888;">No spots claimed yet. Be the first!</p>';
+  async function loadPoll() {
+    try {
+      const res = await fetch(`${API}/current-poll`);
+      const poll = await res.json();
+      if (!poll.exists) {
         statusMsg.className = 'status-msg loading';
-        statusMsg.textContent = `Poll open – ${capacity} spots available`;
-      } else {
-        statusMsg.style.display = 'none';
-      }
-      spotsContainer.innerHTML = html;
-    }
-
-    function updateButtons(spots) {
-      if (!token || !voterName) {
-        claimBtn.disabled = true;
-        claimBtn.textContent = 'Register first to claim';
+        statusMsg.textContent = 'No active poll. Check back later.';
+        pollTitle.textContent = '';
+        spotsContainer.innerHTML = '';
+        claimBtn.style.display = 'none';
+        cancelBtn.style.display = 'none';
         return;
       }
-      const mySpot = spots.find(s => s.voterToken === token && !s.cancelled);
-      const myCancelled = spots.find(s => s.voterToken === token && s.cancelled);
-      
-      if (mySpot) {
-        claimBtn.disabled = true;
-        claimBtn.style.display = 'none';
-        cancelBtn.style.display = 'block';
-        cancelBtn.disabled = false;
-        cancelBtn.textContent = 'Cancel My Spot';
-      } else if (myCancelled) {
-        claimBtn.disabled = true;
-        claimBtn.textContent = 'You cancelled your spot';
-        cancelBtn.style.display = 'none';
-      } else {
-        claimBtn.disabled = false;
-        claimBtn.style.display = 'block';
-        claimBtn.textContent = '🏸 Claim a Spot';
-        cancelBtn.style.display = 'none';
-      }
+      pollTitle.textContent = poll.title;
+      renderSpots(poll.spots, poll.capacity);
+      updateButtons(poll.spots);
+    } catch (err) {
+      statusMsg.className = 'status-msg error';
+      statusMsg.textContent = 'Could not load poll.';
     }
+  }
 
-    claimBtn.addEventListener('click', async () => {
-      if (!token) return alert('You must register first.');
-      const res = await fetch(`${API}/claim-spot`, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ token })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        loadPoll();
-      } else {
-        alert(data.error || 'Claim failed.');
-      }
+  function renderSpots(spots, capacity) {
+    const confirmed = spots.filter(s => !s.cancelled);
+    const cancelled = spots.filter(s => s.cancelled);
+    
+    let html = '';
+    // Show confirmed spots: first <capacity> are green, rest are amber
+    for (let i = 0; i < confirmed.length; i++) {
+      const s = confirmed[i];
+      const cls = i < capacity ? 'spot-green' : 'spot-amber';
+      const time = new Date(s.claimedAt).toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+      html += `<div class="spot-row ${cls}"><span>${s.name}</span><span class="small">${time}</span></div>`;
+    }
+    // Show cancelled spots in blue with strikethrough
+    for (const s of cancelled) {
+      const time = new Date(s.claimedAt).toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+      html += `<div class="spot-row spot-blue"><span>${s.name}</span><span class="small">${time}</span></div>`;
+    }
+    
+    if (html === '') {
+      html = '<p style="text-align:center;color:#888;">No spots claimed yet. Be the first!</p>';
+      statusMsg.className = 'status-msg loading';
+      statusMsg.textContent = `Poll open – ${capacity} spots available`;
+    } else {
+      statusMsg.style.display = 'none';
+    }
+    spotsContainer.innerHTML = html;
+  }
+
+  function updateButtons(spots) {
+    if (!token || !voterName) {
+      claimBtn.disabled = true;
+      claimBtn.textContent = 'Register first to claim';
+      claimBtn.style.display = 'block';
+      cancelBtn.style.display = 'none';
+      return;
+    }
+    const mySpot = spots.find(s => s.voterToken === token && !s.cancelled);
+    const myCancelled = spots.find(s => s.voterToken === token && s.cancelled);
+    
+    if (mySpot) {
+      claimBtn.style.display = 'none';
+      cancelBtn.style.display = 'block';
+      cancelBtn.disabled = false;
+      cancelBtn.textContent = 'Cancel My Spot';
+    } else if (myCancelled) {
+      claimBtn.style.display = 'block';
+      claimBtn.disabled = true;
+      claimBtn.textContent = 'You cancelled your spot';
+      cancelBtn.style.display = 'none';
+    } else {
+      claimBtn.style.display = 'block';
+      claimBtn.disabled = false;
+      claimBtn.textContent = '🏸 Claim a Spot';
+      cancelBtn.style.display = 'none';
+    }
+  }
+
+  claimBtn.addEventListener('click', async () => {
+    if (!token) return alert('You must register first.');
+    const res = await fetch(`${API}/claim-spot`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ token })
     });
+    const data = await res.json();
+    if (res.ok) {
+      // Reload the poll data automatically to show the new spot
+      await loadPoll();
+    } else {
+      alert(data.error || 'Claim failed.');
+    }
+  });
 
-    cancelBtn.addEventListener('click', async () => {
-      if (!token) return;
-      const res = await fetch(`${API}/cancel-spot`, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ token })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        loadPoll();
-      } else {
-        alert(data.error || 'Cancel failed.');
-      }
+  cancelBtn.addEventListener('click', async () => {
+    if (!token) return;
+    const res = await fetch(`${API}/cancel-spot`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ token })
     });
+    const data = await res.json();
+    if (res.ok) {
+      await loadPoll();
+    } else {
+      alert(data.error || 'Cancel failed.');
+    }
+  });
 
-    loadPoll();
-    setInterval(loadPoll, 10000); // auto‑refresh every 10s
-  </script>
+  // Manual refresh button
+  const refreshBtn = document.createElement('button');
+  refreshBtn.textContent = '↻ Refresh';
+  refreshBtn.className = 'btn';
+  refreshBtn.style.backgroundColor = '#ddd';
+  refreshBtn.style.color = '#333';
+  refreshBtn.addEventListener('click', loadPoll);
+  document.querySelector('.card').appendChild(refreshBtn);
+
+  // Initial load
+  loadPoll();
+</script>
+
 </body>
 </html>
