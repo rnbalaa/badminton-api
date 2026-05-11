@@ -13,6 +13,8 @@ app.use((req, res, next) => {
 const voters = {};       // token -> { name, isAdmin }
 const claimedNames = {}; // name -> token (prevents duplicates)
 
+let currentPoll = null; // the active poll object
+
 // ===== ADMIN: Seed the voter name list (run once) =====
 const VALID_NAMES = [
   'Ashwin', 'BalaRN', 'Bala Nagaraj', 'Dilee', 'Guru1',
@@ -76,7 +78,7 @@ app.get('/', (req, res) => {
 
 // ==================== POLLING (v0.2) ====================
 
-let currentPoll = null; // the active poll object
+
 
 // POST /create-poll — admin only
 app.post('/create-poll', (req, res) => {
