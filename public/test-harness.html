@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Poll Test Harness</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f0f4e8; }
+    button { padding: 12px 20px; margin: 8px; font-size: 1rem; cursor: pointer; }
+    #log { background: #1e1e1e; color: #ddd; padding: 15px; border-radius: 8px; margin-top: 15px; white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <h2>🧪 Badminton Poll Test Harness</h2>
+  <p>Use this page to simulate multiple voters. </p>
+  <button onclick="claimTestSpots(8)">Fill 8 confirmed spots (green)</button>
+  <button onclick="claimTestSpots(10)">Fill 8 green + 2 amber</button>
+  <button onclick="cancelOne()">Cancel one green spot</button>
+  <button onclick="resetPoll()">Reset poll (remove all spots)</button>
+  <div id="log"></div>
+
+  <script>
+    const API = 'https://pollapp-rlmm.onrender.com';
+
+    function log(msg) {
+      const p = document.createElement('div');
+      p.textContent = msg;
+      document.getElementById('log').appendChild(p);
+      document.getElementById('log').scrollTop = document.getElementById('log').scrollHeight;
+    }
+
+    async function claimTestSpots(total) {
+      log(`⏳ Claiming ${total} test spots...`);
+      for (let i = 0; i < total; i++) {
+        // pick a name that hasn't been claimed yet (or any dummy)
+        const name = 'Test' + (i + 1);
+        // Register the dummy user
+        const regRes = await fetch(`${API}/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name })
+        });
+        const regData = await regRes.json();
+        if (!regRes.ok) {
+          log(`⚠️ register ${name} failed: ${regData.error}`);
+          continue;
+        }
+        // Claim a spot using that token
+        const claimRes = await fetch(`${API}/claim-spot`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: regData.token })
+        });
+        const claimData = await claimRes.json();
+        if (claimRes.ok) {
+          log(`✅ ${name} claimed spot`);
+        } else {
+          log(`❌ ${name} claim error: ${claimData.error}`);
+        }
+      }
+      log('🏁 Done. Refresh the poll page to see the updated list.');
+    }
+
+    async function cancelOne() {
+      // Cancel the first active spot we find
+      const res = await fetch(`${API}/current-poll`);
+      const poll = await res.json();
+      if (!poll.exists || poll.spots.length === 0) {
+        log('No spots to cancel.');
+        return;
+      }
+      const spot = poll.spots[0]; // first spot
+      // we need the real token – but we can cancel via the voter name if we know it. 
+      // The test harness can't easily cancel because we don't store tokens. 
+      // We'll send a cancel request with a dummy token? That won't work.
+      // Better: create a dummy user, claim, then immediately cancel it.
+      const name = 'CancelTest';
+      const regRes = await fetch(`${API}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+      });
+      const regData = await regRes.json();
+      if (!regRes.ok) {
+        log(`⚠️ register for cancel failed: ${regData.error}`);
+        return;
+      }
+      // claim
+      const claimRes = await fetch(`${API}/claim-spot`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: regData.token })
+      });
+      const claimData = await claimRes.json();
+      if (!claimRes.ok) {
+        log(`⚠️ claim for cancel failed: ${claimData.error}`);
+        return;
+      }
+      // now cancel
+      const cancelRes = await fetch(`${API}/cancel-spot`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: regData.token })
+      });
+      const cancelData = await cancelRes.json();
+      if (cancelRes.ok) {
+        log(`✅ Cancelled spot for ${name}`);
+      } else {
+        log(`❌ Cancel failed: ${cancelData.error}`);
+      }
+    }
+
+    async function resetPoll() {
+      // Clear all spots by creating a new poll (admin)
+      const res = await fetch(`${API}/create-poll`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminKey: 'bundbppgmbh', title: 'Test Poll (auto-created)', capacity: 8 })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        log('🔄 Poll reset. All spots cleared.');
+      } else {
+        log(`⚠️ Reset failed: ${data.error}`);
+      }
+    }
+  </script>
+</body>
+</html>
