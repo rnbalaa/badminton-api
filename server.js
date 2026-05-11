@@ -22,6 +22,8 @@ const VALID_NAMES = [
   'Dummy23', 'Dummy24', 'Dummy25'
 ];
 
+app.use(express.static('public'));
+
 // ===== ENDPOINTS =====
 
 // GET available names (not yet claimed)
