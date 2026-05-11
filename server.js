@@ -22,6 +22,8 @@ const VALID_NAMES = [
   'Dummy23', 'Dummy24', 'Dummy25'
 ];
 
+const ADMIN_KEY = 'bundbppgmbh';
+
 app.use(express.static('public'));
 
 // ===== ENDPOINTS =====
@@ -62,6 +64,93 @@ app.get('/voter', (req, res) => {
 // GET / – health check
 app.get('/', (req, res) => {
   res.json({ status: 'Badminton Poll API v0.1', voters: Object.keys(voters).length });
+});
+
+// ==================== POLLING (v0.2) ====================
+
+let currentPoll = null; // the active poll object
+
+// POST /create-poll — admin only
+app.post('/create-poll', (req, res) => {
+  const { adminKey, title, capacity } = req.body;
+  if (adminKey !== ADMIN_KEY) {
+    return res.status(403).json({ error: 'Invalid admin key.' });
+  }
+  if (!title || !capacity || capacity < 1) {
+    return res.status(400).json({ error: 'Title and capacity (≥1) are required.' });
+  }
+  // If a poll already exists, we could overwrite it, but for now we replace it
+  currentPoll = {
+    title: title,
+    capacity: capacity,
+    spots: []  // each spot: { voterToken, voterName, claimedAt, cancelledAt }
+  };
+  console.log(`📋 Poll created: "${title}" (capacity ${capacity})`);
+  res.json({ success: true, poll: currentPoll });
+});
+
+// GET /current-poll — anyone can fetch the active poll
+app.get('/current-poll', (req, res) => {
+  if (!currentPoll) {
+    return res.json({ exists: false });
+  }
+  // Return the poll without exposing voter tokens
+  res.json({
+    exists: true,
+    title: currentPoll.title,
+    capacity: currentPoll.capacity,
+    spots: currentPoll.spots.map(s => ({
+      name: s.voterName,
+      claimedAt: s.claimedAt,
+      cancelled: !!s.cancelledAt
+    }))
+  });
+});
+
+// POST /claim-spot — a registered voter claims a spot
+app.post('/claim-spot', (req, res) => {
+  const { token } = req.body;
+  if (!currentPoll) {
+    return res.status(400).json({ error: 'No active poll.' });
+  }
+  // Verify voter
+  if (!token || !voters[token]) {
+    return res.status(401).json({ error: 'Invalid or missing token.' });
+  }
+  const voter = voters[token];
+  // Check if already claimed (and not cancelled)
+  const existing = currentPoll.spots.find(s => s.voterToken === token && !s.cancelledAt);
+  if (existing) {
+    return res.status(409).json({ error: 'You already claimed a spot.' });
+  }
+  // Add new spot
+  const spot = {
+    voterToken: token,
+    voterName: voter.name,
+    claimedAt: new Date().toISOString(),
+    cancelledAt: null
+  };
+  currentPoll.spots.push(spot);
+  console.log(`✅ ${voter.name} claimed a spot`);
+  res.json({ success: true, spot });
+});
+
+// POST /cancel-spot — voter cancels their own spot
+app.post('/cancel-spot', (req, res) => {
+  const { token } = req.body;
+  if (!currentPoll) {
+    return res.status(400).json({ error: 'No active poll.' });
+  }
+  if (!token || !voters[token]) {
+    return res.status(401).json({ error: 'Invalid or missing token.' });
+  }
+  const spot = currentPoll.spots.find(s => s.voterToken === token && !s.cancelledAt);
+  if (!spot) {
+    return res.status(404).json({ error: 'You have no active spot to cancel.' });
+  }
+  spot.cancelledAt = new Date().toISOString();
+  console.log(`❌ ${spot.voterName} cancelled their spot`);
+  res.json({ success: true, spot });
 });
 
 const PORT = process.env.PORT || 3000;
