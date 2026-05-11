@@ -21,7 +21,7 @@ const VALID_NAMES = [
   'Suhas', 'Vedha', 'Viraj', 'Vishwas', 'Venky', 'Vinay', 'Dummy22',
   'Dummy23', 'Dummy24', 'Dummy25',
   'Test1','Test2','Test3','Test4','Test5','Test6','Test7','Test8',
-  'Test9','Test10','CancelTest'
+  'Test9','Test10','CancelTest',
 ];
 
 const ADMIN_KEY = 'bundbppgmbh';
