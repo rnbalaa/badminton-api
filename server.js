@@ -19,7 +19,9 @@ const VALID_NAMES = [
   'Guru2', 'Guru4', 'Gundu Rao', 'Lucky', 'Manju',
   'Mohan', 'Prashant Steinbach', 'Prashant Konigstein', 'Pradeep', 'Shivanna',
   'Suhas', 'Vedha', 'Viraj', 'Vishwas', 'Venky', 'Vinay', 'Dummy22',
-  'Dummy23', 'Dummy24', 'Dummy25'
+  'Dummy23', 'Dummy24', 'Dummy25',
+  'Test1','Test2','Test3','Test4','Test5','Test6','Test7','Test8',
+  'Test9','Test10','CancelTest'
 ];
 
 const ADMIN_KEY = 'bundbppgmbh';
