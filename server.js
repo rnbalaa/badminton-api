@@ -133,6 +133,11 @@ app.post('/claim-spot', (req, res) => {
   if (existing) {
     return res.status(409).json({ error: 'You already claimed a spot.' });
   }
+  // 🚫 NEW: Block if voter has already cancelled this week
+  const cancelledSpot = currentPoll.spots.find(s => s.voterToken === token && s.cancelledAt);
+  if (cancelledSpot) {
+    return res.status(403).json({ error: 'You have already cancelled your spot and cannot reclaim this week.' });
+  }
   // Add new spot
   const spot = {
     voterToken: token,
