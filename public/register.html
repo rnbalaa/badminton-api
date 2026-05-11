@@ -102,61 +102,73 @@
     <div id="namesContainer" class="names-list">Loading…</div>
   </div>
 
-  <script>
-    // 🔧 CHANGE THIS to your Render API URL (e.g., 'https://badminton-api.onrender.com')
-    const API = 'https://pollapp-rlmm.onrender.com';
+<script>
+  const API = 'https://pollapp-rlmm.onrender.com';
 
-    const namesContainer = document.getElementById('namesContainer');
-    const statusDiv = document.getElementById('status');
+  const namesContainer = document.getElementById('namesContainer');
+  const statusDiv = document.getElementById('status');
 
-    async function loadNames() {
-      try {
-        const res = await fetch(`${API}/available-names`);
-        const data = await res.json();
-        renderNames(data.available, data.claimed, data.total);
-      } catch (err) {
-        namesContainer.innerHTML = '<p style="color:#c62828;">⚠️ Could not load names. Check API URL.</p>';
-      }
+  // ----- CHECK FOR EXISTING REGISTRATION -----
+  const savedToken = localStorage.getItem('voterToken');
+  const savedName = localStorage.getItem('voterName');
+  if (savedToken && savedName) {
+    namesContainer.innerHTML = '';
+    statusDiv.style.display = 'block';
+    statusDiv.className = 'result success';
+    statusDiv.textContent = `✅ You're registered as ${savedName}. You can vote in any poll.`;
+  } else {
+    // ----- LOAD AVAILABLE NAMES -----
+    loadNames();
+  }
+
+  async function loadNames() {
+    try {
+      const res = await fetch(`${API}/available-names`);
+      const data = await res.json();
+      renderNames(data.available);
+    } catch (err) {
+      namesContainer.innerHTML = '<p style="color:#c62828;">⚠️ Could not load names. Check API URL.</p>';
     }
+  }
 
-    function renderNames(available, claimedCount, total) {
-      if (available.length === 0) {
-        namesContainer.innerHTML = '<p style="text-align:center;color:#888;">All names claimed! 🎉</p>';
-        return;
-      }
-      namesContainer.innerHTML = available.map(name =>
-        `<button class="name-btn" onclick="claim('${name}')">${name}</button>`
-      ).join('');
+  function renderNames(available) {
+    if (available.length === 0) {
+      namesContainer.innerHTML = '<p style="text-align:center;color:#888;">All names claimed! 🎉</p>';
+      return;
     }
+    namesContainer.innerHTML = available.map(name =>
+      `<button class="name-btn" onclick="claim('${name}')">${name}</button>`
+    ).join('');
+  }
 
-    async function claim(name) {
-      try {
-        const res = await fetch(`${API}/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name })
-        });
-        const data = await res.json();
-        if (res.ok) {
-          localStorage.setItem('voterToken', data.token);
-          localStorage.setItem('voterName', data.name);
-          statusDiv.style.display = 'block';
-          statusDiv.className = 'result success';
-          statusDiv.textContent = `✅ You're all set, ${data.name}! You can now vote in any poll.`;
-          setTimeout(loadNames, 1500);
-        } else {
-          statusDiv.style.display = 'block';
-          statusDiv.className = 'result error';
-          statusDiv.textContent = data.error || 'Registration failed.';
-        }
-      } catch (err) {
+  async function claim(name) {
+    try {
+      const res = await fetch(`${API}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('voterToken', data.token);
+        localStorage.setItem('voterName', data.name);
+        statusDiv.style.display = 'block';
+        statusDiv.className = 'result success';
+        statusDiv.textContent = `✅ You're all set, ${data.name}! You can now vote in any poll.`;
+        // Reload the page so the token check runs and shows the persistent message
+        setTimeout(() => location.reload(), 1500);
+      } else {
         statusDiv.style.display = 'block';
         statusDiv.className = 'result error';
-        statusDiv.textContent = 'Connection error. Check the API URL.';
+        statusDiv.textContent = data.error || 'Registration failed.';
       }
+    } catch (err) {
+      statusDiv.style.display = 'block';
+      statusDiv.className = 'result error';
+      statusDiv.textContent = 'Connection error. Check the API URL.';
     }
+  }
+</script>
 
-    loadNames();
-  </script>
 </body>
 </html>
