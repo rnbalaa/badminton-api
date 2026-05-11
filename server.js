@@ -26,6 +26,14 @@ const ADMIN_KEY = 'bundbppgmbh';
 
 app.use(express.static('public'));
 
+// ✅ AUTO-CREATE A DEFAULT POLL ON STARTUP (for testing)
+currentPoll = {
+  title: 'Test Poll (auto-created)',
+  capacity: 8,
+  spots: []
+};
+console.log(`📋 Default poll created: "${currentPoll.title}" (capacity ${currentPoll.capacity})`);
+
 // ===== ENDPOINTS =====
 
 // GET available names (not yet claimed)
