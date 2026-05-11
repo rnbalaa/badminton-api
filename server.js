@@ -77,7 +77,8 @@ app.get('/current-poll', (req, res) => {
     spots: currentPoll.spots.map(s => ({
       name: s.voterName,
       claimedAt: s.claimedAt,
-      cancelled: !!s.cancelledAt
+      cancelled: !!s.cancelledAt,
+      cancelledAt: s.cancelledAt || null
     }))
   });
 });
