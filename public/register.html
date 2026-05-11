@@ -108,17 +108,33 @@
   const namesContainer = document.getElementById('namesContainer');
   const statusDiv = document.getElementById('status');
 
-  // ----- CHECK FOR EXISTING REGISTRATION -----
-  const savedToken = localStorage.getItem('voterToken');
-  const savedName = localStorage.getItem('voterName');
-  if (savedToken && savedName) {
-    namesContainer.innerHTML = '';
-    statusDiv.style.display = 'block';
-    statusDiv.className = 'result success';
-    statusDiv.textContent = `✅ You're registered as ${savedName}. You can vote in any poll.`;
-  } else {
-    // ----- LOAD AVAILABLE NAMES -----
-    loadNames();
+  // ----- CHECK IF STORED TOKEN IS STILL VALID -----
+  async function checkTokenValidity() {
+    const savedToken = localStorage.getItem('voterToken');
+    const savedName = localStorage.getItem('voterName');
+    if (!savedToken || !savedName) {
+      // No token saved – show available names
+      loadNames();
+      return;
+    }
+    try {
+      const res = await fetch(`${API}/voter?token=${encodeURIComponent(savedToken)}`);
+      if (res.ok) {
+        // Token is still valid – show persistent "you're registered" message
+        namesContainer.innerHTML = '';
+        statusDiv.style.display = 'block';
+        statusDiv.className = 'result success';
+        statusDiv.textContent = `✅ You're registered as ${savedName}. You can vote in any poll.`;
+      } else {
+        // Token is invalid (e.g., server restarted) – clear old data and reload
+        localStorage.removeItem('voterToken');
+        localStorage.removeItem('voterName');
+        location.reload();
+      }
+    } catch (err) {
+      // Network error – show names anyway so user isn't stuck
+      loadNames();
+    }
   }
 
   async function loadNames() {
@@ -155,7 +171,7 @@
         statusDiv.style.display = 'block';
         statusDiv.className = 'result success';
         statusDiv.textContent = `✅ You're all set, ${data.name}! You can now vote in any poll.`;
-        // Reload the page so the token check runs and shows the persistent message
+        // Reload so the token check runs and shows the persistent message
         setTimeout(() => location.reload(), 1500);
       } else {
         statusDiv.style.display = 'block';
@@ -168,6 +184,9 @@
       statusDiv.textContent = 'Connection error. Check the API URL.';
     }
   }
+
+  // Start by checking if the saved token is still good
+  checkTokenValidity();
 </script>
 
 </body>
