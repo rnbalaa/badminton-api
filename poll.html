@@ -16,7 +16,7 @@
       align-items: center;
       justify-content: center;
     }
-    .logo { width: 60px; height: 60px; margin-bottom: 15px; }
+    .logo { width: 80px; height: 80px; margin-bottom: 15px; }   /* Larger logo */
     h1 { display: none; }
     .poll-title { 
       color: #1e1e1e; 
@@ -159,7 +159,7 @@
         const s = confirmed[i];
         const cls = i < capacity ? 'spot-green' : 'spot-amber';
         const time = new Date(s.claimedAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        const arrow = s.promoted ? ' <span style="font-size:0.9rem;">⬆️</span>' : '';
+        const arrow = s.promoted ? ' <span style="color:#fbc02d; font-weight:bold;">↑</span>' : '';
         html += `<div class="spot-row ${cls}"><span>${s.name}${arrow}</span><span class="small">${time}</span></div>`;
       }
       for (const s of cancelled) {
