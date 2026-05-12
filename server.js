@@ -25,6 +25,10 @@ const VALID_NAMES = [
 ];
 
 const ADMIN_KEY = 'bundbppgmbh';
+// Serve the combined page at root
+app.get('/', (req, res) => {
+  res.sendFile(__dirname + '/public/index.html');
+});
 app.use(express.static('public'));
 
 currentPoll = {
@@ -56,9 +60,10 @@ app.get('/voter', (req, res) => {
   res.json({ name: voters[token].name });
 });
 
-app.get('/', (req, res) => {
+app.get('/api/health', (req, res) => {
   res.json({ status: 'Badminton Poll API v0.1', voters: Object.keys(voters).length });
 });
+
 
 // ==================== POLLING ====================
 
