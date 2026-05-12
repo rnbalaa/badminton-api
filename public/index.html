@@ -123,8 +123,11 @@
       } catch(e) { statusMsg.className='status-msg error'; statusMsg.textContent='Could not load poll.'; }
     }
     function renderSpots(spots,capacity){
-      const confirmed=spots.filter(s=>!s.cancelled), cancelled=spots.filter(s=>s.cancelled); let html='';
-      for(let i=0;i<confirmed.length;i++){const s=confirmed[i],cls=i<capacity?'spot-green':'spot-amber',time=new Date(s.claimedAt).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});const arrow=s.promoted?' <span style="color:#1565c0;font-weight:bold;font-size:1.2rem" title="Promoted from waitlist">↑ (promoted)</span>':'';html+=`<div class="spot-row ${cls}"><span>${s.name}${arrow}</span><span class="small">${time}</span></div>`;}
+      const confirmed=spots.filter(s=>!s.cancelled), cancelled=spots.filter(s=>s.cancelled);
+      // sort cancelled: newest first
+      cancelled.sort((a,b)=> new Date(b.cancelledAt) - new Date(a.cancelledAt));
+      let html='';
+      for(let i=0;i<confirmed.length;i++){const s=confirmed[i],cls=i<capacity?'spot-green':'spot-amber',time=new Date(s.claimedAt).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});const arrow=s.promoted?' <span style="color:#000;font-weight:bold;font-size:1.4rem" title="Promoted from waitlist">↑</span>':'';html+=`<div class="spot-row ${cls}"><span>${s.name}${arrow}</span><span class="small">${time}</span></div>`;}
       for(const s of cancelled){const claimTime=new Date(s.claimedAt).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',second:'2-digit'}),cancelTime=new Date(s.cancelledAt).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});html+=`<div class="spot-row spot-blue"><span>${s.name} <span class="small">${claimTime}</span></span><span style="text-decoration:none;font-size:0.8rem;color:#1565c0">${cancelTime}</span></div>`;}
       if(html===''){html='<p style="text-align:center;color:#888">No spots claimed yet. Be the first!</p>';statusMsg.className='status-msg loading';statusMsg.textContent=`Poll open – ${capacity} spots available`;}else{statusMsg.classList.add('hidden');}
       spotsContainer.innerHTML=html;
