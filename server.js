@@ -20,22 +20,19 @@ const VALID_NAMES = [
   'Mohan', 'Prashant Steinbach', 'Prashant Konigstein', 'Pradeep', 'Shivanna',
   'Suhas', 'Vedha', 'Viraj', 'Vishwas', 'Venky', 'Vinay', 'Dummy22',
   'Dummy23', 'Dummy24', 'Dummy25',
-  'Test1','Test2','Test3','Test4','Test5','Test6','Test7','Test8',
-  'Test9','Test10','CancelTest',
+  'Test1','Test2','Test3','Test4','Test5','Test6','Test7','Test8','Test9','Test10','CancelTest'
 ];
 
 const ADMIN_KEY = 'bundbppgmbh';
-// Serve the combined page at root
-app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/public/index.html');
-});
 app.use(express.static('public'));
 
+// ✅ AUTO-CREATE A DEFAULT POLL ON STARTUP
 currentPoll = {
   title: 'Test Poll (auto-created)',
   capacity: 8,
   spots: []
 };
+console.log(`📋 Default poll created: "${currentPoll.title}" (capacity ${currentPoll.capacity})`);
 
 // ===== ENDPOINTS =====
 
@@ -60,10 +57,15 @@ app.get('/voter', (req, res) => {
   res.json({ name: voters[token].name });
 });
 
+// Health check moved to /api/health
 app.get('/api/health', (req, res) => {
   res.json({ status: 'Badminton Poll API v0.1', voters: Object.keys(voters).length });
 });
 
+// Serve the combined page at root
+app.get('/', (req, res) => {
+  res.sendFile(__dirname + '/public/index.html');
+});
 
 // ==================== POLLING ====================
 
@@ -85,12 +87,12 @@ app.get('/current-poll', (req, res) => {
       name: s.voterName,
       claimedAt: s.claimedAt,
       cancelled: !!s.cancelledAt,
-      cancelledAt: s.cancelledAt || null
+      cancelledAt: s.cancelledAt || null,
+      promoted: !!s.promoted
     }))
   });
 });
 
-// 🔍 NEW: Check YOUR spot status
 app.get('/my-spot', (req, res) => {
   const token = req.query.token;
   if (!currentPoll) return res.json({ hasSpot: false, reason: 'no-poll' });
@@ -117,7 +119,7 @@ app.post('/claim-spot', (req, res) => {
     return res.status(403).json({ error: 'You have already cancelled and cannot reclaim.' });
   }
   
-  const spot = { voterToken: token, voterName: voter.name, claimedAt: new Date().toISOString(), cancelledAt: null };
+  const spot = { voterToken: token, voterName: voter.name, claimedAt: new Date().toISOString(), cancelledAt: null, promoted: false };
   currentPoll.spots.push(spot);
   res.json({ success: true, spot });
 });
@@ -130,6 +132,19 @@ app.post('/cancel-spot', (req, res) => {
   const spot = currentPoll.spots.find(s => s.voterToken === token && !s.cancelledAt);
   if (!spot) return res.status(404).json({ error: 'You have no active spot to cancel.' });
   spot.cancelledAt = new Date().toISOString();
+
+  // Promote the first waitlisted (amber) player automatically
+  const activeSpots = currentPoll.spots.filter(s => !s.cancelledAt);
+  const capacity = currentPoll.capacity;
+  for (let i = 0; i < activeSpots.length; i++) {
+    const s = activeSpots[i];
+    if (i >= capacity && !s.promoted) {
+      s.promoted = true;
+      console.log(`⬆️ Promoted ${s.voterName} from waitlist`);
+      break;
+    }
+  }
+
   res.json({ success: true, spot });
 });
 

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Poll Test Harness</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f0f4e8; }
+    button { padding: 12px 20px; margin: 8px; font-size: 1rem; cursor: pointer; border-radius: 10px; border: none; background: #2e7d32; color: white; }
+    button.reset { background: #c62828; }
+    button.cancel { background: #e65100; }
+    button.fill4 { background: #005f73; }
+    #log { background: #1e1e1e; color: #ddd; padding: 15px; border-radius: 8px; margin-top: 15px; white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <h2>🧪 One‑Click Test Harness</h2>
+  <p>Simulate voters. Use <strong>Fill 4</strong> or <strong>Fill 8+2</strong> for your friend test.</p>
+  <button class="fill4" onclick="fillSpots(4)">✅ Fill 4 spots (green)</button>
+  <button onclick="fillSpots(8)">✅ Fill 8 spots (green)</button>
+  <button onclick="fillSpots(10)">✅ Fill 8 green + 2 amber</button>
+  <button class="cancel" onclick="cancelRandomGreen()">❌ Cancel a random GREEN spot</button>
+  <button onclick="console.log('greenTokens:', greenTokens)">🐞 Log greenTokens</button>
+  <button class="cancel" onclick="cancelTwoGreen()">❌ Cancel TWO green spots</button>
+  <button class="reset" onclick="resetPoll()">🔄 Reset poll (clear all)</button>
+  <div id="log"></div>
+
+  <script>
+    const API = 'https://pollapp-rlmm.onrender.com';
+    let greenTokens = [];
+
+    function log(msg) {
+      const div = document.createElement('div');
+      div.textContent = msg;
+      document.getElementById('log').appendChild(div);
+      document.getElementById('log').scrollTop = document.getElementById('log').scrollHeight;
+    }
+
+    async function registerAndClaim(name, storeToken = true) {
+      const regRes = await fetch(`${API}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+      });
+      const regData = await regRes.json();
+      if (!regRes.ok) {
+        log(`❌ ${name} register: ${regData.error}`);
+        return null;
+      }
+      const claimRes = await fetch(`${API}/claim-spot`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: regData.token })
+      });
+      const claimData = await claimRes.json();
+      if (claimRes.ok) {
+        log(`✅ ${name} claimed`);
+        if (storeToken) greenTokens.push(regData.token);
+        return true;
+      } else {
+        log(`❌ ${name} claim: ${claimData.error}`);
+        return false;
+      }
+    }
+
+    async function fillSpots(total) {
+      greenTokens = [];
+      log(`⏳ Claiming ${total} test spots...`);
+      for (let i = 1; i <= total; i++) {
+        const name = 'Test' + i;
+        await registerAndClaim(name, true);
+      }
+      log(`🏁 Done — refresh the poll page to see the ${total} spots.`);
+    }
+
+    async function cancelRandomGreen() {
+      if (greenTokens.length === 0) {
+        log('⚠️ No green spot tokens stored. Click “Fill” first.');
+        return;
+      }
+      const token = greenTokens.shift();
+      log(`🔄 Cancelling a green spot...`);
+      const cancelRes = await fetch(`${API}/cancel-spot`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token })
+      });
+      const cancelData = await cancelRes.json();
+      if (cancelRes.ok) {
+        log(`✅ Green spot cancelled. Promotion may happen.`);
+      } else {
+        log(`❌ Cancel failed: ${cancelData.error}`);
+        greenTokens.unshift(token);
+      }
+    }
+
+    async function cancelTwoGreen() {
+      if (greenTokens.length < 2) {
+        log('⚠️ Need at least 2 green spots to cancel two. Fill some spots first.');
+        return;
+      }
+      log('🔄 Cancelling TWO green spots...');
+      for (let i = 0; i < 2; i++) {
+        const token = greenTokens.shift();
+        const cancelRes = await fetch(`${API}/cancel-spot`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token })
+        });
+        const cancelData = await cancelRes.json();
+        if (cancelRes.ok) {
+          log(`✅ Cancelled a green spot.`);
+        } else {
+          log(`❌ Cancel failed for a spot: ${cancelData.error}`);
+          greenTokens.unshift(token);
+          break;
+        }
+      }
+    }
+
+    async function resetPoll() {
+      const res = await fetch(`${API}/create-poll`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminKey: 'bundbppgmbh', title: 'Test Poll (auto-created)', capacity: 8 })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        log('🔄 Poll cleared. All spots removed.');
+        greenTokens = [];
+      } else {
+        log(`❌ reset: ${data.error}`);
+      }
+    }
+  </script>
+</body>
+</html>

@@ -159,7 +159,8 @@
         const s = confirmed[i];
         const cls = i < capacity ? 'spot-green' : 'spot-amber';
         const time = new Date(s.claimedAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        html += `<div class="spot-row ${cls}"><span>${s.name}</span><span class="small">${time}</span></div>`;
+        const arrow = s.promoted ? ' <span style="font-size:0.9rem;">⬆️</span>' : '';
+        html += `<div class="spot-row ${cls}"><span>${s.name}${arrow}</span><span class="small">${time}</span></div>`;
       }
       for (const s of cancelled) {
         const claimTime = new Date(s.claimedAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -233,7 +234,6 @@
       }
     });
 
-    // Auto-refresh
     loadPoll();
     setInterval(loadPoll, 10000);
     window.addEventListener('focus', loadPoll);
