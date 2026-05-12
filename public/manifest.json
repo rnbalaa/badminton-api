@@ -1,0 +1,11 @@
+{
+  "name": "Badminton Poll",
+  "short_name": "Badminton Poll",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#c8e6c9",
+  "theme_color": "#e63946",
+  "icons": [
+    { "src": "/logo.svg", "sizes": "512x512", "type": "image/svg+xml" }
+  ]
+}
