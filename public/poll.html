@@ -16,8 +16,8 @@
       align-items: center;
       justify-content: center;
     }
-    .logo { width: 60px; height: 60px; margin-bottom: 15px; }
-    h1 { display: none; }                     /* hide the big title */
+    .logo { width: 80px; height: 80px; margin-bottom: 15px; }   /* Larger logo */
+    h1 { display: none; }
     .poll-title { 
       color: #1e1e1e; 
       font-weight: 600;
@@ -78,11 +78,9 @@
     .btn-cancel { background: #c62828; color: white; }
     .btn-cancel:disabled { background: #ccc; color: #666; }
     hr { display: none; }
-    /* Remove old refresh button styling – no longer needed */
   </style>
 </head>
 <body>
-  <!-- Centered logo only -->
   <svg class="logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <filter id="panelShadow" x="-20%" y="-20%" width="140%" height="140%">
@@ -161,17 +159,14 @@
         const s = confirmed[i];
         const cls = i < capacity ? 'spot-green' : 'spot-amber';
         const time = new Date(s.claimedAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        html += `<div class="spot-row ${cls}"><span>${s.name}</span><span class="small">${time}</span></div>`;
+        const arrow = s.promoted ? ' <span style="color:#fbc02d; font-weight:bold;">↑</span>' : '';
+        html += `<div class="spot-row ${cls}"><span>${s.name}${arrow}</span><span class="small">${time}</span></div>`;
       }
-
-for (const s of cancelled) {
-  const claimTime = new Date(s.claimedAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  const cancelTime = new Date(s.cancelledAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  html += `<div class="spot-row spot-blue">
-    <span>${s.name} <span class="small">${claimTime}</span></span>
-    <span style="text-decoration: none; font-size:0.8rem; color:#666;">${cancelTime}</span>
-  </div>`;
-}
+      for (const s of cancelled) {
+        const claimTime = new Date(s.claimedAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const cancelTime = new Date(s.cancelledAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        html += `<div class="spot-row spot-blue"><span>${s.name} <span class="small">${claimTime}</span></span><span style="text-decoration: none; font-size:0.8rem; color:#1565c0;">${cancelTime}</span></div>`;
+      }
       if (html === '') {
         html = '<p style="text-align:center;color:#888;">No spots claimed yet. Be the first!</p>';
         statusMsg.className = 'status-msg loading';
@@ -179,7 +174,6 @@ for (const s of cancelled) {
       } else {
         statusMsg.style.display = 'none';
       }
-
       spotsContainer.innerHTML = html;
     }
 
@@ -240,7 +234,6 @@ for (const s of cancelled) {
       }
     });
 
-    // Auto-refresh every 10 seconds and also on page focus
     loadPoll();
     setInterval(loadPoll, 10000);
     window.addEventListener('focus', loadPoll);
