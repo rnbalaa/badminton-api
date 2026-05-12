@@ -75,7 +75,7 @@
     }
     .btn-claim { background: #2e7d32; color: white; }
     .btn-claim:disabled { background: #ccc; color: #666; }
-    .btn-cancel { background: #1565c0; color: white; }
+    .btn-cancel { background: #c62828; color: white; }
     .btn-cancel:disabled { background: #ccc; color: #666; }
     hr { display: none; }
     /* Remove old refresh button styling – no longer needed */
@@ -163,11 +163,15 @@
         const time = new Date(s.claimedAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         html += `<div class="spot-row ${cls}"><span>${s.name}</span><span class="small">${time}</span></div>`;
       }
-      for (const s of cancelled) {
-        const claimTime = new Date(s.claimedAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        const cancelTime = new Date(s.cancelledAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        html += `<div class="spot-row spot-blue"><span>${s.name}</span><span class="small">${claimTime} (cancelled ${cancelTime})</span></div>`;
-      }
+
+for (const s of cancelled) {
+  const claimTime = new Date(s.claimedAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const cancelTime = new Date(s.cancelledAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  html += `<div class="spot-row spot-blue">
+    <span>${s.name} <span class="small">${claimTime}</span></span>
+    <span style="text-decoration: none; font-size:0.8rem; color:#666;">${cancelTime}</span>
+  </div>`;
+}
       if (html === '') {
         html = '<p style="text-align:center;color:#888;">No spots claimed yet. Be the first!</p>';
         statusMsg.className = 'status-msg loading';
@@ -175,6 +179,7 @@
       } else {
         statusMsg.style.display = 'none';
       }
+
       spotsContainer.innerHTML = html;
     }
 
