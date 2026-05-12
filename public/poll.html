@@ -8,71 +8,26 @@
     body {
       font-family: -apple-system, 'Segoe UI', sans-serif;
       background: #c8e6c9;
-      margin: 0;
-      padding: 20px;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
+      margin: 0; padding: 20px; min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
     }
-    .logo { width: 80px; height: 80px; margin-bottom: 15px; }   /* Larger logo */
+    .logo { width: 100px; height: 100px; margin-bottom: 15px; }   /* BIGGER */
     h1 { display: none; }
-    .poll-title { 
-      color: #1e1e1e; 
-      font-weight: 600;
-      margin-bottom: 20px;
-      text-align: center;
-      font-size: 1.2rem;
-    }
+    .poll-title { color: #1e1e1e; font-weight: 600; margin-bottom: 20px; text-align: center; font-size: 1.2rem; }
     .card {
-      background: white;
-      border-radius: 20px;
-      padding: 24px;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.12);
-      max-width: 400px;
-      width: 100%;
+      background: white; border-radius: 20px; padding: 24px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.12); max-width: 400px; width: 100%;
     }
-    .status-msg {
-      text-align: center;
-      font-weight: 500;
-      margin-bottom: 15px;
-      padding: 12px;
-      border-radius: 10px;
-    }
+    .status-msg { text-align: center; font-weight: 500; margin-bottom: 15px; padding: 12px; border-radius: 10px; }
     .status-msg.loading { background: #fff3e0; color: #e65100; }
     .status-msg.error { background: #ffebee; color: #c62828; }
-    .spots-list {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      max-height: 55vh;
-      overflow-y: auto;
-      margin-bottom: 15px;
-    }
-    .spot-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 8px 12px;
-      border-radius: 10px;
-      font-weight: 500;
-    }
+    .spots-list { display: flex; flex-direction: column; gap: 6px; max-height: 55vh; overflow-y: auto; margin-bottom: 15px; }
+    .spot-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-radius: 10px; font-weight: 500; }
     .spot-green { background: #e8f5e9; color: #2e7d32; }
     .spot-amber { background: #fff8e1; color: #f57f17; }
     .spot-blue { background: #e3f2fd; color: #1565c0; text-decoration: line-through; }
     .small { font-size: 0.8rem; color: #666; }
-    .btn {
-      width: 100%;
-      padding: 16px;
-      font-size: 1.2rem;
-      border: none;
-      border-radius: 14px;
-      cursor: pointer;
-      font-weight: 600;
-      margin-bottom: 10px;
-      transition: background 0.2s;
-    }
+    .btn { width: 100%; padding: 16px; font-size: 1.2rem; border: none; border-radius: 14px; cursor: pointer; font-weight: 600; margin-bottom: 10px; transition: background 0.2s; }
     .btn-claim { background: #2e7d32; color: white; }
     .btn-claim:disabled { background: #ccc; color: #666; }
     .btn-cancel { background: #c62828; color: white; }
@@ -116,12 +71,9 @@
     const API = 'https://pollapp-rlmm.onrender.com';
     const token = localStorage.getItem('voterToken');
     const voterName = localStorage.getItem('voterName');
-
-    const statusMsg = document.getElementById('statusMsg');
-    const claimBtn = document.getElementById('claimBtn');
-    const cancelBtn = document.getElementById('cancelBtn');
-    const spotsContainer = document.getElementById('spotsContainer');
-    const pollTitle = document.getElementById('pollTitle');
+    const statusMsg = document.getElementById('statusMsg'), claimBtn = document.getElementById('claimBtn'),
+          cancelBtn = document.getElementById('cancelBtn'), spotsContainer = document.getElementById('spotsContainer'),
+          pollTitle = document.getElementById('pollTitle');
 
     async function loadPoll() {
       try {
@@ -129,109 +81,67 @@
           fetch(`${API}/current-poll`),
           token ? fetch(`${API}/my-spot?token=${encodeURIComponent(token)}`) : Promise.resolve({ json: () => ({ hasSpot: false }) })
         ]);
-        const poll = await pollRes.json();
-        const mySpot = await spotRes.json();
-
+        const poll = await pollRes.json(), mySpot = await spotRes.json();
         if (!poll.exists) {
-          statusMsg.className = 'status-msg loading';
-          statusMsg.textContent = 'No active poll. Check back later.';
-          pollTitle.textContent = '';
-          spotsContainer.innerHTML = '';
-          claimBtn.style.display = 'none';
-          cancelBtn.style.display = 'none';
-          return;
+          statusMsg.className = 'status-msg loading'; statusMsg.textContent = 'No active poll. Check back later.';
+          pollTitle.textContent = ''; spotsContainer.innerHTML = '';
+          claimBtn.style.display = 'none'; cancelBtn.style.display = 'none'; return;
         }
-
         pollTitle.textContent = poll.title;
         renderSpots(poll.spots, poll.capacity);
         updateButtons(mySpot);
-      } catch (err) {
-        statusMsg.className = 'status-msg error';
-        statusMsg.textContent = 'Could not load poll.';
-      }
+      } catch (err) { statusMsg.className = 'status-msg error'; statusMsg.textContent = 'Could not load poll.'; }
     }
 
     function renderSpots(spots, capacity) {
-      const confirmed = spots.filter(s => !s.cancelled);
-      const cancelled = spots.filter(s => s.cancelled);
+      const confirmed = spots.filter(s => !s.cancelled), cancelled = spots.filter(s => s.cancelled);
       let html = '';
       for (let i = 0; i < confirmed.length; i++) {
-        const s = confirmed[i];
-        const cls = i < capacity ? 'spot-green' : 'spot-amber';
-        const time = new Date(s.claimedAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        const arrow = s.promoted ? ' <span style="color:#fbc02d; font-weight:bold;">↑</span>' : '';
+        const s = confirmed[i], cls = i < capacity ? 'spot-green' : 'spot-amber',
+              time = new Date(s.claimedAt).toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+        const arrow = s.promoted ? ' <span style="color:#1565c0; font-weight:bold; font-size:1.2rem;">↑</span>' : '';
         html += `<div class="spot-row ${cls}"><span>${s.name}${arrow}</span><span class="small">${time}</span></div>`;
       }
       for (const s of cancelled) {
-        const claimTime = new Date(s.claimedAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        const cancelTime = new Date(s.cancelledAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        html += `<div class="spot-row spot-blue"><span>${s.name} <span class="small">${claimTime}</span></span><span style="text-decoration: none; font-size:0.8rem; color:#1565c0;">${cancelTime}</span></div>`;
+        const claimTime = new Date(s.claimedAt).toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', second:'2-digit' }),
+              cancelTime = new Date(s.cancelledAt).toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+        html += `<div class="spot-row spot-blue"><span>${s.name} <span class="small">${claimTime}</span></span><span style="text-decoration:none; font-size:0.8rem; color:#1565c0;">${cancelTime}</span></div>`;
       }
       if (html === '') {
         html = '<p style="text-align:center;color:#888;">No spots claimed yet. Be the first!</p>';
-        statusMsg.className = 'status-msg loading';
-        statusMsg.textContent = `Poll open – ${capacity} spots available`;
-      } else {
-        statusMsg.style.display = 'none';
-      }
+        statusMsg.className = 'status-msg loading'; statusMsg.textContent = `Poll open – ${capacity} spots available`;
+      } else { statusMsg.style.display = 'none'; }
       spotsContainer.innerHTML = html;
     }
 
     function updateButtons(mySpot) {
       if (!token || !voterName) {
-        claimBtn.disabled = true;
-        claimBtn.textContent = 'Register first to claim';
-        claimBtn.style.display = 'block';
-        cancelBtn.style.display = 'none';
-        return;
+        claimBtn.disabled = true; claimBtn.textContent = 'Register first to claim';
+        claimBtn.style.display = 'block'; cancelBtn.style.display = 'none'; return;
       }
-
       if (mySpot.hasSpot && mySpot.status === 'active') {
-        claimBtn.style.display = 'none';
-        cancelBtn.style.display = 'block';
-        cancelBtn.disabled = false;
-        cancelBtn.textContent = 'Cancel My Spot';
+        claimBtn.style.display = 'none'; cancelBtn.style.display = 'block';
+        cancelBtn.disabled = false; cancelBtn.textContent = 'Cancel My Spot';
       } else if (mySpot.hasSpot && mySpot.status === 'cancelled') {
-        claimBtn.style.display = 'block';
-        claimBtn.disabled = true;
-        claimBtn.textContent = 'You cancelled your spot';
-        cancelBtn.style.display = 'none';
+        claimBtn.style.display = 'block'; claimBtn.disabled = true;
+        claimBtn.textContent = 'You cancelled your spot'; cancelBtn.style.display = 'none';
       } else {
-        claimBtn.style.display = 'block';
-        claimBtn.disabled = false;
-        claimBtn.textContent = '🏸 Claim a Spot';
-        cancelBtn.style.display = 'none';
+        claimBtn.style.display = 'block'; claimBtn.disabled = false;
+        claimBtn.textContent = '🏸 Claim a Spot'; cancelBtn.style.display = 'none';
       }
     }
 
     claimBtn.addEventListener('click', async () => {
       if (!token) return alert('You must register first.');
-      const res = await fetch(`${API}/claim-spot`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token })
-      });
+      const res = await fetch(`${API}/claim-spot`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ token }) });
       const data = await res.json();
-      if (res.ok) {
-        await loadPoll();
-      } else {
-        alert(data.error || 'Claim failed.');
-      }
+      if (res.ok) await loadPoll(); else alert(data.error || 'Claim failed.');
     });
-
     cancelBtn.addEventListener('click', async () => {
       if (!token) return;
-      const res = await fetch(`${API}/cancel-spot`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token })
-      });
+      const res = await fetch(`${API}/cancel-spot`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ token }) });
       const data = await res.json();
-      if (res.ok) {
-        await loadPoll();
-      } else {
-        alert(data.error || 'Cancel failed.');
-      }
+      if (res.ok) await loadPoll(); else alert(data.error || 'Cancel failed.');
     });
 
     loadPoll();

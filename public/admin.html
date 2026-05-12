@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin – Badminton Poll</title>
+  <style>
+    body { font-family: -apple-system, sans-serif; background: #1e1e2f; color: #ccc; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+    .admin-card { background: #2a2a3c; padding: 30px; border-radius: 20px; text-align: center; max-width: 350px; width: 100%; }
+    input { width: 80%; padding: 10px; margin: 10px 0; border-radius: 8px; border: 1px solid #555; background: #0f0f1a; color: #eee; }
+    button { background: #c62828; color: white; border: none; padding: 12px 24px; border-radius: 10px; font-size: 1rem; cursor: pointer; margin-top: 10px; }
+    button:hover { background: #e53935; }
+    .msg { margin-top: 15px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="admin-card">
+    <h2>🔐 Admin Reset</h2>
+    <p style="color:#aaa;">Enter admin key to clear all spots</p>
+    <input type="password" id="adminKey" placeholder="Admin key" value="bundbppgmbh">
+    <br>
+    <button onclick="resetPoll()">⚠️ Reset Poll (clear spots)</button>
+    <div id="message" class="msg"></div>
+  </div>
+
+  <script>
+    const API = 'https://pollapp-rlmm.onrender.com';
+    async function resetPoll() {
+      const key = document.getElementById('adminKey').value;
+      const res = await fetch(`${API}/create-poll`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminKey: key, title: 'Test Poll (auto-created)', capacity: 8 })
+      });
+      const data = await res.json();
+      document.getElementById('message').textContent = data.success ?
+        '✅ Poll cleared. All spots removed.' : `❌ ${data.error || 'Failed'}`;
+    }
+  </script>
+</body>
+</html>
