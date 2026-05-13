@@ -6,26 +6,38 @@
   <title>Admin – Badminton Poll</title>
   <style>
     body { font-family: -apple-system, sans-serif; background: #1e1e2f; color: #ccc; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-    .admin-card { background: #2a2a3c; padding: 30px; border-radius: 20px; text-align: center; max-width: 350px; width: 100%; }
-    input { width: 80%; padding: 10px; margin: 10px 0; border-radius: 8px; border: 1px solid #555; background: #0f0f1a; color: #eee; }
-    button { background: #c62828; color: white; border: none; padding: 12px 24px; border-radius: 10px; font-size: 1rem; cursor: pointer; margin-top: 10px; }
-    button:hover { background: #e53935; }
-    .msg { margin-top: 15px; font-weight: bold; }
+    .admin-card { background: #2a2a3c; padding: 30px; border-radius: 20px; text-align: center; max-width: 400px; width: 100%; }
+    h2 { margin-bottom: 10px; }
+    input { width: 80%; padding: 10px; margin: 10px 0; border-radius: 8px; border: 1px solid #555; background: #0f0f1a; color: #eee; text-align: center; }
+    button { width: 100%; padding: 14px; margin: 8px 0; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; color: white; }
+    .btn-clear { background: #c62828; }
+    .btn-reset { background: #b71c1c; }  /* slightly darker for destructive */
+    .btn-clear:hover { background: #e53935; }
+    .btn-reset:hover { background: #d32f2f; }
+    .msg { margin-top: 15px; font-weight: bold; min-height: 24px; }
+    .warning { color: #ff8a80; font-size: 0.85rem; margin-top: 5px; }
   </style>
 </head>
 <body>
   <div class="admin-card">
-    <h2>🔐 Admin Reset</h2>
-    <p style="color:#aaa;">Enter admin key to clear all spots</p>
+    <h2>🔐 Admin Controls</h2>
+    <p style="color:#aaa;">Enter admin key to proceed</p>
     <input type="password" id="adminKey" placeholder="Admin key" value="bundbppgmbh">
-    <br>
-    <button onclick="resetPoll()">⚠️ Reset Poll (clear spots)</button>
+    
+    <button class="btn-clear" onclick="clearPoll()">🧹 Clear Poll</button>
+    <p class="warning">Removes all spots only – registrations remain.</p>
+    
+    <button class="btn-reset" onclick="resetAll()">⚠️ Reset Everything</button>
+    <p class="warning">Clears spots AND all registrations.</p>
+    
     <div id="message" class="msg"></div>
   </div>
 
   <script>
     const API = 'https://pollapp-rlmm.onrender.com';
-    async function resetPoll() {
+    const msg = document.getElementById('message');
+    
+    async function clearPoll() {
       const key = document.getElementById('adminKey').value;
       const res = await fetch(`${API}/create-poll`, {
         method: 'POST',
@@ -33,8 +45,19 @@
         body: JSON.stringify({ adminKey: key, title: 'Test Poll (auto-created)', capacity: 8 })
       });
       const data = await res.json();
-      document.getElementById('message').textContent = data.success ?
-        '✅ Poll cleared. All spots removed.' : `❌ ${data.error || 'Failed'}`;
+      msg.textContent = data.success ? '✅ Poll cleared. All spots removed.' : `❌ ${data.error || 'Failed'}`;
+    }
+    
+    async function resetAll() {
+      if (!confirm('This will delete ALL registrations and spots. Continue?')) return;
+      const key = document.getElementById('adminKey').value;
+      const res = await fetch(`${API}/admin/reset-all`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminKey: key })
+      });
+      const data = await res.json();
+      msg.textContent = data.success ? '✅ Everything reset. All registrations and spots cleared.' : `❌ ${data.error || 'Failed'}`;
     }
   </script>
 </body>

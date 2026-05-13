@@ -22,7 +22,6 @@
     .spot-amber { background:#fff8e1; color:#f57f17; }
     .spot-blue { background:#e3f2fd; color:#1565c0; text-decoration:line-through; }
     .small { font-size:0.8rem; color:#666; }
-    /* Grey separator line after main court */
     .separator {
       height: 1px;
       background: #ccc;
@@ -34,11 +33,12 @@
     .btn-claim:disabled { background:#ccc; color:#666; }
     .btn-cancel { background:#c62828; color:white; }
     .btn-cancel:disabled { background:#ccc; color:#666; }
+    .btn-reclaim { background:#1565c0; color:white; }
+    .btn-reclaim:disabled { background:#ccc; color:#666; }
     hr { display:none; }
   </style>
 </head>
 <body>
-  <!-- NEW LOGO – larger emojis inside -->
   <svg class="logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <filter id="panelShadow" x="-20%" y="-20%" width="140%" height="140%">
@@ -62,31 +62,66 @@
     </g>
   </svg>
 
-  <div class="card"><div class="poll-title" id="pollTitle"></div><div id="statusMsg" class="status-msg loading">Loading poll…</div><div id="spotsContainer" class="spots-list"></div><button id="claimBtn" class="btn btn-claim" disabled>🏸 Claim a Spot</button><button id="cancelBtn" class="btn btn-cancel" disabled style="display:none">Cancel My Spot</button></div>
+  <div class="card"><div class="poll-title" id="pollTitle"></div><div id="statusMsg" class="status-msg loading">Loading poll…</div><div id="spotsContainer" class="spots-list"></div><button id="claimBtn" class="btn btn-claim" disabled>🏸 Claim a Spot</button><button id="cancelBtn" class="btn btn-cancel" disabled style="display:none">Give Up</button></div>
   <script>
     const API='https://pollapp-rlmm.onrender.com';const token=localStorage.getItem('voterToken'),voterName=localStorage.getItem('voterName');const statusMsg=document.getElementById('statusMsg'),claimBtn=document.getElementById('claimBtn'),cancelBtn=document.getElementById('cancelBtn'),spotsContainer=document.getElementById('spotsContainer'),pollTitle=document.getElementById('pollTitle');
     async function loadPoll(){try{const[pollRes,spotRes]=await Promise.all([fetch(`${API}/current-poll`),token?fetch(`${API}/my-spot?token=${encodeURIComponent(token)}`):Promise.resolve({json:()=>({hasSpot:false})})]);const poll=await pollRes.json(),mySpot=await spotRes.json();if(!poll.exists){statusMsg.className='status-msg loading';statusMsg.textContent='No active poll. Check back later.';pollTitle.textContent='';spotsContainer.innerHTML='';claimBtn.style.display='none';cancelBtn.style.display='none';return;}pollTitle.textContent=poll.title;renderSpots(poll.spots,poll.capacity);updateButtons(mySpot);}catch(err){statusMsg.className='status-msg error';statusMsg.textContent='Could not load poll.';}}
     function renderSpots(spots,capacity){
       const confirmed=spots.filter(s=>!s.cancelled), cancelled=spots.filter(s=>s.cancelled);
-      // sort cancelled: newest first
       cancelled.sort((a,b)=> new Date(b.cancelledAt) - new Date(a.cancelledAt));
       let html='';
       for(let i=0;i<confirmed.length;i++){
         const s=confirmed[i],cls=i<capacity?'spot-green':'spot-amber',time=new Date(s.claimedAt).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-        // Insert grey line before the first waitlist (amber) player
         if(i === capacity && confirmed.length > capacity) {
           html += '<div class="separator"></div>';
         }
-        const arrow=s.promoted?' <span style="color:#000;font-weight:bold;font-size:1.6rem" title="Promoted from waitlist">↑</span>':'';
-        html += `<div class="spot-row ${cls}"><span>${s.name}${arrow}</span><span class="small">${time}</span></div>`;
+        const arrow = s.promoted ? ' <span style="color:#000;font-weight:bold;font-size:1.6rem" title="Promoted from waitlist">↑</span>' : '';
+        const reclaimArrow = s.reclaimed ? ' <span style="color:#1565c0;font-weight:bold;font-size:1.3rem" title="Re‑joined after giving up">↩</span>' : '';
+        html += `<div class="spot-row ${cls}"><span>${s.name}${arrow}${reclaimArrow}</span><span class="small">${time}</span></div>`;
       }
       for(const s of cancelled){const claimTime=new Date(s.claimedAt).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',second:'2-digit'}),cancelTime=new Date(s.cancelledAt).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});html+=`<div class="spot-row spot-blue"><span>${s.name} <span class="small">${claimTime}</span></span><span style="text-decoration:none;font-size:0.8rem;color:#1565c0">${cancelTime}</span></div>`;}
       if(html===''){html='<p style="text-align:center;color:#888">No spots claimed yet. Be the first!</p>';statusMsg.className='status-msg loading';statusMsg.textContent=`Poll open – ${capacity} spots available`;}else{statusMsg.style.display='none';}
       spotsContainer.innerHTML=html;
     }
-    function updateButtons(mySpot){if(!token||!voterName){claimBtn.disabled=true;claimBtn.textContent='Register first to claim';claimBtn.style.display='block';cancelBtn.style.display='none';return;}if(mySpot.hasSpot&&mySpot.status==='active'){claimBtn.style.display='none';cancelBtn.style.display='block';cancelBtn.disabled=false;cancelBtn.textContent='Cancel My Spot';}else if(mySpot.hasSpot&&mySpot.status==='cancelled'){claimBtn.style.display='block';claimBtn.disabled=true;claimBtn.textContent='You cancelled your spot';cancelBtn.style.display='none';}else{claimBtn.style.display='block';claimBtn.disabled=false;claimBtn.textContent='🏸 Claim a Spot';cancelBtn.style.display='none';}}
-    claimBtn.addEventListener('click',async()=>{if(!token)return alert('You must register first.');const res=await fetch(`${API}/claim-spot`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})});const data=await res.json();if(res.ok)await loadPoll();else alert(data.error||'Claim failed.');});
-    cancelBtn.addEventListener('click',async()=>{if(!token)return;const res=await fetch(`${API}/cancel-spot`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})});const data=await res.json();if(res.ok)await loadPoll();else alert(data.error||'Cancel failed.');});
+    function updateButtons(mySpot){
+      claimBtn.classList.remove('hidden');cancelBtn.classList.add('hidden');
+      if(!token||!voterName){claimBtn.disabled=true;claimBtn.textContent='Register first to claim';claimBtn.className='btn btn-claim';return;}
+      if(mySpot.hasSpot && mySpot.status==='active'){
+        cancelBtn.classList.remove('hidden');
+        cancelBtn.disabled = false;
+        cancelBtn.textContent = 'Give Up';
+        cancelBtn.className = 'btn btn-cancel';
+        claimBtn.classList.add('hidden');
+      } else if(mySpot.hasSpot && mySpot.status==='cancelled'){
+        claimBtn.classList.remove('hidden');
+        claimBtn.disabled = false;
+        claimBtn.textContent = 'Re‑claim Spot';
+        claimBtn.className = 'btn btn-reclaim';
+        cancelBtn.classList.add('hidden');
+      } else {
+        claimBtn.classList.remove('hidden');
+        claimBtn.disabled = false;
+        claimBtn.textContent = '🏸 Claim a Spot';
+        claimBtn.className = 'btn btn-claim';
+        cancelBtn.classList.add('hidden');
+      }
+    }
+    async function doClaim(){
+      if(!token) return alert('You must register first.');
+      const res = await fetch(`${API}/claim-spot`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})});
+      const data = await res.json();
+      if(res.ok) await loadPoll();
+      else alert(data.error||'Claim failed.');
+    }
+    async function doCancel(){
+      if(!token) return;
+      const res = await fetch(`${API}/cancel-spot`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})});
+      const data = await res.json();
+      if(res.ok) await loadPoll();
+      else alert(data.error||'Give Up failed.');
+    }
+    claimBtn.addEventListener('click', doClaim);
+    cancelBtn.addEventListener('click', doCancel);
     loadPoll();setInterval(loadPoll,10000);window.addEventListener('focus',loadPoll);
     if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js');}
   </script>
