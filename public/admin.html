@@ -3,261 +3,287 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin – Badminton Poll</title>
-  <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#c8e6c9">
-  <link rel="apple-touch-icon" sizes="180x180" href="/logo.svg">
+  <title>Badminton Poll – Fun Teaser with QR</title>
   <style>
-    body { font-family: -apple-system, 'Segoe UI', sans-serif; background: #c8e6c9; margin: 0; padding: 20px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
-    .logo { width: 80px; height: 80px; margin: 10px 0; }
-    .admin-card { background: white; border-radius: 20px; padding: 24px; box-shadow: 0 8px 30px rgba(0,0,0,0.12); max-width: 500px; width: 100%; }
-    h2 { text-align: center; margin: 0 0 10px; color: #1e1e1e; }
-    .key-area { text-align: center; margin-bottom: 15px; }
-    .key-area input { width: 80%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; text-align: center; font-size: 1rem; }
-    .btn-row { display: flex; justify-content: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
-    .btn { padding: 8px 16px; border: none; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; color: white; }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-test { background: #2e7d32; }
-    .btn-clear-poll { background: #c62828; }
-    .btn-reset { background: #b71c1c; }
-    .btn-passwords { background: #1565c0; }
-    .btn-add-member { background: #00695c; }
-    .roster { margin-top: 20px; }
-    .roster h3 { color: #1e1e1e; margin: 0 0 10px; }
-    .player-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #eee; }
-    .player-name { font-weight: 500; }
-    .player-actions { display: flex; gap: 5px; }
-    .player-actions button { background: none; border: none; cursor: pointer; font-size: 1rem; padding: 2px 6px; border-radius: 4px; }
-    .player-actions button:hover { background: #f0f0f0; }
-    .passcode-reveal { font-size: 0.85rem; color: #555; margin-left: 8px; }
-    .footer { text-align: center; margin-top: 20px; font-size: 0.75rem; color: #888; }
-    .msg { margin-top: 10px; font-weight: bold; text-align: center; min-height: 20px; }
+    body { background: #1e1e1e; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; font-family: sans-serif; }
+    canvas { display: none; }
+    button { background: #e63946; color: white; border: none; padding: 16px 32px; font-size: 20px; font-weight: bold; border-radius: 16px; cursor: pointer; margin: 20px 0; box-shadow: 0 6px 15px rgba(0,0,0,0.4); }
+    #preview { max-width: 90vw; max-height: 85vh; box-shadow: 0 10px 40px rgba(0,0,0,0.6); border-radius: 20px; }
   </style>
 </head>
 <body>
-  <svg class="logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <filter id="panelShadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000" flood-opacity="0.35"/></filter>
-      <filter id="iconShadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="2" dy="4" stdDeviation="3" flood-color="#000" flood-opacity="0.4"/></filter>
-      <linearGradient id="drop" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f2f9ff"/><stop offset="100%" stop-color="#b8d8f8"/></linearGradient>
-    </defs>
-    <rect x="15" y="15" width="70" height="70" rx="18" fill="white" filter="url(#panelShadow)"/>
-    <g transform="translate(50,50) scale(0.8) translate(-50,-50)">
-      <circle cx="50" cy="50" r="34" fill="url(#drop)" stroke="#e63946" stroke-width="7" filter="url(#iconShadow)"/>
-      <ellipse cx="40" cy="33" rx="8" ry="5" fill="white" opacity="0.5" transform="rotate(-25, 40, 33)"/>
-      <circle cx="44" cy="29" r="2" fill="white" opacity="0.8"/>
-      <text font-size="32" x="44" y="50" dominant-baseline="central" text-anchor="middle" font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji">🗳️</text>
-      <text font-size="32" x="56" y="50" dominant-baseline="central" text-anchor="middle" font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji">🏸</text>
-    </g>
-  </svg>
-
-  <div class="admin-card">
-    <h2>Admin Controls</h2>
-    <div class="key-area">
-      <input type="password" id="adminKey" placeholder="Admin key" value="bundbppgmbh" oninput="checkKey()">
-    </div>
-
-    <div class="btn-row">
-      <button class="btn btn-test" id="addTestBtn" disabled onclick="addTestPlayers()">Add Test Players</button>
-      <button class="btn btn-clear-poll" id="clearPollBtn" disabled onclick="clearPoll()">Clear Current Poll</button>
-      <button class="btn btn-reset" id="resetBtn" disabled onclick="resetAll()">Clear Registration</button>
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-passwords" id="passwordsBtn" disabled onclick="enablePasswords()">See Passwords</button>
-      <button class="btn btn-add-member" id="addMemberBtn" disabled onclick="addNewMember()">Add New Member</button>
-    </div>
-
-    <div class="roster">
-      <h3>Registered Players</h3>
-      <div id="rosterList"></div>
-    </div>
-
-    <div id="message" class="msg"></div>
-  </div>
-  <div class="footer">Badminton Poll v0.5.1</div>
+  <canvas id="canvas" width="800" height="1200"></canvas>
+  <img id="preview" alt="Teaser preview">
+  <button onclick="downloadPNG()">📥 Download Teaser PNG</button>
 
   <script>
-    const API = 'https://pollapp-rlmm.onrender.com';
-    const keyInput = document.getElementById('adminKey');
-    const message = document.getElementById('message');
-    let adminKeyValid = false;
-    let showPasswordsEnabled = false;
-    let passcodeData = {};
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const W = 800, H = 1200;
 
-    // Check key validity (simple local check)
-    function checkKey() {
-      adminKeyValid = (keyInput.value === 'bundbppgmbh');
-      document.getElementById('addTestBtn').disabled = !adminKeyValid;
-      document.getElementById('clearPollBtn').disabled = !adminKeyValid;
-      document.getElementById('resetBtn').disabled = !adminKeyValid;
-      document.getElementById('passwordsBtn').disabled = !adminKeyValid;
-      document.getElementById('addMemberBtn').disabled = !adminKeyValid;
-      if (!adminKeyValid) showPasswordsEnabled = false;
+    // ==================== BACKGROUND: badminton court ====================
+    ctx.fillStyle = '#2e7d32';
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 6;
+    ctx.strokeRect(40, 150, W - 80, H - 300);
+    ctx.beginPath();
+    ctx.moveTo(40, H/2 + 80);
+    ctx.lineTo(W - 40, H/2 + 80);
+    ctx.stroke();
+    ctx.lineWidth = 3;
+    for (let i = 0; i < 25; i++) {
+      const x = 40 + i * ((W - 80) / 25);
+      ctx.beginPath();
+      ctx.moveTo(x, H/2 + 20);
+      ctx.lineTo(x, H/2 + 140);
+      ctx.stroke();
     }
-    checkKey(); // initial check
 
-    async function loadRoster() {
-      if (!adminKeyValid) {
-        document.getElementById('rosterList').innerHTML = '<p style="color:#888;">Enter admin key to view.</p>';
-        return;
-      }
-      try {
-        const [regRes, pollRes] = await Promise.all([
-          fetch(`${API}/admin/registered?key=${encodeURIComponent(keyInput.value)}`),
-          fetch(`${API}/current-poll`)
-        ]);
-        const regData = await regRes.json();
-        const pollData = await pollRes.json();
+    // ==================== STARBURST behind headline ====================
+    ctx.save();
+    ctx.translate(400, 190);
+    ctx.fillStyle = '#ffcc00';
+    ctx.shadowColor = '#000';
+    ctx.shadowBlur = 25;
+    ctx.beginPath();
+    for (let i = 0; i < 24; i++) {
+      const angle = (i * 30) * Math.PI / 180;
+      const innerR = 50, outerR = 110;
+      ctx.lineTo(Math.cos(angle - 0.1) * outerR, Math.sin(angle - 0.1) * outerR);
+      ctx.lineTo(Math.cos(angle + 0.1) * innerR, Math.sin(angle + 0.1) * innerR);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
 
-        if (!regRes.ok) {
-          document.getElementById('rosterList').innerHTML = `<p style="color:#c62828;">${regData.error}</p>`;
-          return;
+    // ==================== HEADLINE: "COMING SOON" ====================
+    ctx.save();
+    ctx.translate(400, 190);
+    ctx.rotate(-0.06);
+    ctx.font = '900 82px "Impact", "Arial Black", sans-serif';
+    ctx.fillStyle = '#c62828';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = '#000';
+    ctx.shadowBlur = 12;
+    ctx.fillText('COMING SOON', 0, 0);
+    ctx.restore();
+    ctx.font = 'italic 44px "Georgia", serif';
+    ctx.fillStyle = '#c62828';
+    ctx.textAlign = 'center';
+    ctx.shadowBlur = 8;
+    ctx.fillText('for you to test', 400, 280);
+
+    // ==================== DRAW LOGO (canvas based, no distortion) ====================
+    function drawLogo(x, y, size) {
+      ctx.save();
+      ctx.translate(x, y);
+      const s = size / 100;
+      ctx.shadowColor = 'rgba(0,0,0,0.35)';
+      ctx.shadowBlur = 15;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 6;
+      ctx.fillStyle = '#ffffff';
+      roundRect(ctx, 15 * s, 15 * s, 70 * s, 70 * s, 18 * s, true, false);
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(50 * s, 50 * s, 34 * s, 0, 2 * Math.PI);
+      ctx.shadowColor = 'rgba(0,0,0,0.4)';
+      ctx.shadowBlur = 6;
+      ctx.shadowOffsetX = 2;
+      ctx.shadowOffsetY = 4;
+      ctx.strokeStyle = '#e63946';
+      ctx.lineWidth = 7 * s;
+      ctx.stroke();
+      ctx.restore();
+      const gradient = ctx.createLinearGradient(50 * s, 30 * s, 50 * s, 70 * s);
+      gradient.addColorStop(0, '#ffffff');
+      gradient.addColorStop(0.6, '#d4ecff');
+      gradient.addColorStop(1, '#b0d0f0');
+      ctx.beginPath();
+      ctx.arc(50 * s, 50 * s, 34 * s - 3.5 * s, 0, 2 * Math.PI);
+      ctx.fillStyle = gradient;
+      ctx.fill();
+      ctx.save();
+      ctx.translate(40 * s, 33 * s);
+      ctx.rotate(-25 * Math.PI / 180);
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 6 * s, 4 * s, 0, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ctx.beginPath();
+      ctx.arc(44 * s, 29 * s, 1.5 * s, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.font = `bold ${28 * s}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
+      ctx.fillStyle = '#000';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🗳️', 44 * s, 50 * s);
+      ctx.fillText('🏸', 58 * s, 50 * s);
+      ctx.restore();
+    }
+
+    drawLogo(580, 60, 180);
+
+    // ==================== FEATURE BADGE ====================
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    roundRect(ctx, 60, 360, 420, 180, 20, true, false);
+    ctx.font = 'bold 28px -apple-system, "Segoe UI", sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'left';
+    ctx.shadowColor = '#000';
+    ctx.shadowBlur = 6;
+    let y = 400;
+    const features = [
+      '✅ No more 9 a.m. alarm',
+      '🎲 Random Friday opening',
+      '🏸 One‑tap claim & cancel',
+      '↕️ Live waitlist & promotions'
+    ];
+    features.forEach(f => { ctx.fillText(f, 80, y); y += 42; });
+    ctx.shadowBlur = 0;
+
+    // ==================== MINI PHONE MOCKUP ====================
+    function drawPhoneMockup(x, y, scale) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(scale, scale);
+      ctx.fillStyle = '#1e1e1e';
+      ctx.shadowColor = 'rgba(0,0,0,0.5)';
+      ctx.shadowBlur = 25;
+      roundRect(ctx, 0, 0, 280, 560, 28, true, false);
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#c8e6c9';
+      roundRect(ctx, 12, 12, 256, 536, 18, true, false);
+      ctx.fillStyle = '#1e1e1e';
+      ctx.fillRect(12, 12, 256, 36);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Badminton Poll', 140, 35);
+      const spots = [
+        { name: 'Vedha', color: '#2e7d32' },
+        { name: 'Venky', color: '#2e7d32' },
+        { name: 'Dilee', color: '#ff9800' },
+        { name: 'Bala (you)', color: '#1565c0', strikethrough: true }
+      ];
+      let sy = 65;
+      spots.forEach(s => {
+        ctx.fillStyle = s.color;
+        ctx.font = 'bold 18px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(s.name, 30, sy);
+        if (s.strikethrough) {
+          ctx.strokeStyle = s.color;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(30, sy - 8);
+          ctx.lineTo(30 + ctx.measureText(s.name).width, sy - 8);
+          ctx.stroke();
         }
+        sy += 38;
+      });
+      ctx.fillStyle = '#2e7d32';
+      roundRect(ctx, 30, sy + 20, 200, 44, 12, true, false);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 18px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🏸 Claim a Spot', 130, sy + 42 + 22);
+      ctx.fillStyle = '#c62828';
+      roundRect(ctx, 30, sy + 80, 200, 44, 12, true, false);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText('Give Up', 130, sy + 102 + 22);
+      ctx.restore();
+    }
 
-        // Build color map from poll spots
-        const spotMap = {};
-        if (pollData.exists) {
-          pollData.spots.forEach((spot, index) => {
-            if (!spot.cancelled) {
-              const isGreen = index < pollData.capacity;
-              spotMap[spot.name] = isGreen ? 'green' : 'amber';
-            } else {
-              spotMap[spot.name] = 'blue';
-            }
-          });
-        }
+    drawPhoneMockup(80, 580, 1.2);
 
-        // Fetch passcodes if we are in show mode
-        if (showPasswordsEnabled) {
-          try {
-            const passRes = await fetch(`${API}/admin/passcodes?key=${encodeURIComponent(keyInput.value)}`);
-            if (passRes.ok) {
-              const passData = await passRes.json();
-              passData.passcodes.forEach(p => { passcodeData[p.name] = p.passcode; });
-            }
-          } catch (e) {}
-        }
-
-        // Render roster
-        const players = regData.registered;
-        if (players.length === 0) {
-          document.getElementById('rosterList').innerHTML = '<p style="color:#888;">No registered players.</p>';
-          return;
-        }
-
-        let html = '';
-        players.forEach(p => {
-          const color = spotMap[p.name] || 'black';
-          let actions = '';
-          if (adminKeyValid) {
-            actions += `<button onclick="removePlayer('${p.name}')" title="Remove registration">❌</button>`;
-            if (showPasswordsEnabled) {
-              const pass = passcodeData[p.name] !== undefined ? (passcodeData[p.name] || '—') : '—';
-              actions += `<span class="passcode-reveal" id="pass-${p.name}">${pass}</span>`;
-              // Schedule hiding after 3 seconds
-              setTimeout(() => {
-                const el = document.getElementById(`pass-${p.name}`);
-                if (el) el.textContent = '';
-              }, 3000);
-            }
-          }
-          html += `<div class="player-row">
-            <span class="player-name" style="color:${color};">${p.name}${p.isAdmin ? ' 🛡️' : ''}</span>
-            <div class="player-actions">${actions}</div>
-          </div>`;
-        });
-        document.getElementById('rosterList').innerHTML = html;
-      } catch (e) {
-        document.getElementById('rosterList').innerHTML = '<p style="color:#c62828;">Error loading roster.</p>';
+    // ==================== SHUTTLECOCK DECORATION ====================
+    function drawShuttlecock(x, y, size) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(0, 0, size * 0.5, 0, Math.PI, true);
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
+      for (let i = -3; i <= 3; i++) {
+        const angle = (i * 15) * Math.PI / 180;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.sin(angle) * size * 0.8, -size * 0.5);
+        ctx.stroke();
       }
+      ctx.strokeStyle = '#e63946';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(0, 0, size * 0.5, Math.PI, 0);
+      ctx.stroke();
+      ctx.restore();
+    }
+    drawShuttlecock(620, 1000, 70);
+    drawShuttlecock(160, 1020, 50);
+    drawShuttlecock(680, 400, 40);
+
+    // ==================== FUNFLAIR: colourful dots ====================
+    ctx.fillStyle = '#ffcc00';
+    ctx.beginPath();
+    ctx.arc(540, 500, 20, 0, 2*Math.PI);
+    ctx.fill();
+    ctx.fillStyle = '#ff6d00';
+    ctx.beginPath();
+    ctx.arc(400, 1020, 18, 0, 2*Math.PI);
+    ctx.fill();
+    ctx.fillStyle = '#e63946';
+    ctx.beginPath();
+    ctx.arc(700, 700, 15, 0, 2*Math.PI);
+    ctx.fill();
+
+    // ==================== QR CODE (bottom right) ====================
+    const qrImg = new Image();
+    qrImg.crossOrigin = 'Anonymous';
+    qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=bit.ly/OurBadmintonPoll';
+    qrImg.onload = () => {
+      // draw white background to ensure contrast
+      ctx.fillStyle = '#ffffff';
+      roundRect(ctx, 620, 1050, 140, 140, 16, true, false);
+      ctx.drawImage(qrImg, 630, 1060, 120, 120);
+
+      // Final preview and download
+      const dataURL = canvas.toDataURL('image/png');
+      document.getElementById('preview').src = dataURL;
+    };
+
+    function roundRect(ctx, x, y, w, h, r, fill, stroke) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+      if (fill) ctx.fill();
+      if (stroke) ctx.stroke();
     }
 
-    async function addTestPlayers() {
-      if (!adminKeyValid) return;
-      const res = await fetch(`${API}/admin/add-test-players`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminKey: keyInput.value })
-      });
-      const data = await res.json();
-      message.textContent = data.success ? '✅ Test players added & claimed.' : `❌ ${data.error || 'Failed'}`;
-      loadRoster();
+    function downloadPNG() {
+      const link = document.createElement('a');
+      link.download = 'BadmintonPoll_Teaser.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
     }
-
-    async function clearPoll() {
-      if (!adminKeyValid) return;
-      const res = await fetch(`${API}/create-poll`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminKey: keyInput.value, title: 'Test Poll (auto-created)', capacity: 8 })
-      });
-      const data = await res.json();
-      message.textContent = data.success ? '✅ Poll cleared.' : `❌ ${data.error || 'Failed'}`;
-      loadRoster();
-    }
-
-    async function resetAll() {
-      if (!adminKeyValid) return;
-      if (!confirm('This will delete ALL registrations and spots. Continue?')) return;
-      const res = await fetch(`${API}/admin/reset-all`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminKey: keyInput.value })
-      });
-      const data = await res.json();
-      message.textContent = data.success ? '✅ All registrations and spots cleared.' : `❌ ${data.error || 'Failed'}`;
-      showPasswordsEnabled = false;
-      passcodeData = {};
-      loadRoster();
-    }
-
-    function enablePasswords() {
-      if (!adminKeyValid) return;
-      showPasswordsEnabled = true;
-      passcodeData = {}; // clear previous
-      message.textContent = '🔓 Passwords enabled. Tap on names to see.';
-      loadRoster();
-    }
-
-    async function addNewMember() {
-      if (!adminKeyValid) return;
-      const names = prompt('Enter name(s), comma‑separated:');
-      if (!names) return;
-      const res = await fetch(`${API}/admin/add-names`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminKey: keyInput.value, names })
-      });
-      const data = await res.json();
-      if (data.success) {
-        message.textContent = `✅ Added: ${data.added.join(', ') || 'none new'}`;
-      } else {
-        message.textContent = `❌ ${data.error || 'Failed'}`;
-      }
-      loadRoster();
-    }
-
-    async function removePlayer(name) {
-      if (!adminKeyValid) return;
-      if (!confirm(`Remove registration for ${name}? This will free the name.`)) return;
-      const res = await fetch(`${API}/admin/remove-registration`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminKey: keyInput.value, name })
-      });
-      const data = await res.json();
-      if (data.success) {
-        message.textContent = `✅ ${name} removed.`;
-      } else {
-        message.textContent = `❌ ${data.error || 'Failed'}`;
-      }
-      loadRoster();
-    }
-
-    // Initial load
-    loadRoster();
-    // Re-check key on input
-    keyInput.addEventListener('input', () => { checkKey(); if (adminKeyValid) loadRoster(); });
   </script>
 </body>
 </html>
