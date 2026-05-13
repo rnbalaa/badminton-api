@@ -37,6 +37,7 @@
     .btn-reclaim { background: #1565c0; color: white; }
     .btn-reclaim:disabled { background: #ccc; color: #666; }
     .hidden { display: none !important; }
+    .footer { text-align: center; margin-top: 20px; font-size: 0.75rem; color: #888; }
   </style>
 </head>
 <body>
@@ -58,6 +59,7 @@
 
   <div id="regSection" class="card hidden"><h2 style="text-align:center;margin:0 0 5px">Welcome!</h2><p style="text-align:center;color:#555;margin-bottom:15px">Tap your name to register (once only)</p><div id="regStatus" class="result" style="display:none"></div><div id="namesContainer" class="names-list">Loading…</div></div>
   <div id="pollSection" class="card hidden"><div class="poll-title" id="pollTitle"></div><div id="statusMsg" class="status-msg loading">Loading poll…</div><div id="spotsContainer" class="spots-list"></div><button id="claimBtn" class="btn btn-claim" disabled>🏸 Claim a Spot</button><button id="cancelBtn" class="btn btn-cancel" disabled>Give Up</button></div>
+  <div class="footer">Badminton Poll v0.5.1</div>
 
   <script>
     const API = 'https://pollapp-rlmm.onrender.com';
@@ -142,13 +144,21 @@
       claimBtn.classList.remove('hidden'); cancelBtn.classList.add('hidden');
       if(!token||!voterName){ claimBtn.disabled=true; claimBtn.textContent='Register first to claim'; claimBtn.className='btn btn-claim'; return; }
       if(mySpot.hasSpot && mySpot.status==='active'){
-        cancelBtn.classList.remove('hidden'); cancelBtn.disabled=false; cancelBtn.textContent='Give Up'; cancelBtn.className='btn btn-cancel';
+        cancelBtn.classList.remove('hidden'); cancelBtn.disabled=false; cancelBtn.textContent = `${voterName}, Something came up`; cancelBtn.className='btn btn-cancel';
         claimBtn.classList.add('hidden');
       } else if(mySpot.hasSpot && mySpot.status==='cancelled'){
-        claimBtn.classList.remove('hidden'); claimBtn.disabled=false; claimBtn.textContent='reClaim'; claimBtn.className='btn btn-reclaim';
+        claimBtn.classList.remove('hidden');
+        if(mySpot.reclaimCount >= mySpot.maxReclaims) {
+          claimBtn.disabled = true;
+          claimBtn.textContent = `${voterName}, Ouch cant do`;
+        } else {
+          claimBtn.disabled = false;
+          claimBtn.textContent = `${voterName}, wanna Join back`;
+        }
+        claimBtn.className = 'btn btn-reclaim';
         cancelBtn.classList.add('hidden');
       } else {
-        claimBtn.classList.remove('hidden'); claimBtn.disabled=false; claimBtn.textContent='🏸 Claim a Spot'; claimBtn.className='btn btn-claim';
+        claimBtn.classList.remove('hidden'); claimBtn.disabled=false; claimBtn.textContent = `${voterName}, Wanna Play?`; claimBtn.className='btn btn-claim';
         cancelBtn.classList.add('hidden');
       }
     }
