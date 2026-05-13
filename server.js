@@ -49,17 +49,7 @@ const VALID_NAMES = [
 const ADMIN_KEY = 'bundbppgmbh';
 const MAX_RECLAIMS = 3;
 
-app.use(express.static('public'));
-
-currentPoll = {
-  title: 'Test Poll (auto-created)',
-  capacity: 8,
-  spots: []
-};
-
-// ===== ENDPOINTS =====
-
-// Root: serve page + increment counter
+// Root: serve page + increment counter (MUST be before static)
 app.get('/', (req, res) => {
   visitCounter++;
   saveCounter();
@@ -70,6 +60,17 @@ app.get('/', (req, res) => {
 app.get('/counter', (req, res) => {
   res.json({ count: visitCounter });
 });
+
+// Static files (after custom routes)
+app.use(express.static('public'));
+
+currentPoll = {
+  title: 'Test Poll (auto-created)',
+  capacity: 8,
+  spots: []
+};
+
+// ===== ENDPOINTS =====
 
 app.get('/available-names', (req, res) => {
   const available = VALID_NAMES.filter(name => !claimedNames[name]);
