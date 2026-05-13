@@ -14,15 +14,18 @@
     h2 { text-align: center; margin: 0 0 10px; color: #1e1e1e; }
     .key-area { text-align: center; margin-bottom: 15px; }
     .key-area input { width: 80%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; text-align: center; font-size: 1rem; }
-    .roster { margin-bottom: 20px; flex: 1; }
-    .roster h3 { color: #1e1e1e; margin: 0 0 10px; }
-    .roster-list { max-height: 45vh; overflow-y: auto; }
-    .player-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #eee; }
+    .roster, .poll-section { margin-bottom: 20px; }
+    .roster h3, .poll-section h3 { color: #1e1e1e; margin: 0 0 10px; }
+    .roster-list, .poll-spot-list { max-height: 25vh; overflow-y: auto; }
+    .player-row, .spot-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #eee; }
     .player-name { font-weight: 500; }
     .player-actions { display: flex; gap: 5px; }
     .player-actions button { background: none; border: none; cursor: pointer; font-size: 1rem; padding: 2px 6px; border-radius: 4px; }
     .player-actions button:hover { background: #f0f0f0; }
     .passcode-reveal { font-size: 0.85rem; color: #555; margin-left: 8px; }
+    .poll-spot-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 0.9rem; }
+    .poll-spot-name { font-weight: 500; }
+    .poll-spot-time { font-size: 0.8rem; color: #666; }
     .btn-section { margin-top: auto; }
     .btn-row { display: flex; justify-content: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
     .btn { padding: 8px 16px; border: none; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; color: white; }
@@ -65,6 +68,12 @@
       <div id="rosterList" class="roster-list"></div>
     </div>
 
+    <!-- Current Poll View -->
+    <div class="poll-section">
+      <h3>Current Poll</h3>
+      <div id="pollView"></div>
+    </div>
+
     <!-- Buttons (bottom) -->
     <div class="btn-section">
       <div class="btn-row">
@@ -100,6 +109,40 @@
     }
     checkKey();
 
+    // ========== Load Poll ==========
+    async function loadPoll() {
+      try {
+        const res = await fetch(`${API}/current-poll`);
+        const poll = await res.json();
+        const pollDiv = document.getElementById('pollView');
+        if (!poll.exists) {
+          pollDiv.innerHTML = '<p style="color:#888;">No active poll.</p>';
+          return;
+        }
+        let html = `<p style="margin:0 0 8px; font-size:0.9rem;">${poll.title} – Capacity: ${poll.capacity}</p>`;
+        const confirmed = poll.spots.filter(s => !s.cancelled);
+        const cancelled = poll.spots.filter(s => s.cancelled);
+        if (confirmed.length === 0 && cancelled.length === 0) {
+          html += '<p style="color:#888;">No spots claimed yet.</p>';
+        } else {
+          for (let i = 0; i < confirmed.length; i++) {
+            const s = confirmed[i];
+            const cls = i < poll.capacity ? 'green' : 'amber';
+            const time = new Date(s.claimedAt).toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' });
+            html += `<div class="poll-spot-row"><span style="color:${cls};">● ${s.name}</span><span class="poll-spot-time">${time}</span></div>`;
+          }
+          for (const s of cancelled) {
+            const time = new Date(s.claimedAt).toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' });
+            html += `<div class="poll-spot-row"><span style="color:blue;text-decoration:line-through;">● ${s.name}</span><span class="poll-spot-time">${time}</span></div>`;
+          }
+        }
+        pollDiv.innerHTML = html;
+      } catch (e) {
+        document.getElementById('pollView').innerHTML = '<p style="color:#c62828;">Could not load poll.</p>';
+      }
+    }
+
+    // ========== Load Roster ==========
     async function loadRoster() {
       if (!adminKeyValid) {
         document.getElementById('rosterList').innerHTML = '<p style="color:#888;">Enter admin key to view.</p>';
@@ -122,8 +165,7 @@
         if (pollData.exists) {
           pollData.spots.forEach((spot, index) => {
             if (!spot.cancelled) {
-              const isGreen = index < pollData.capacity;
-              spotMap[spot.name] = isGreen ? 'green' : 'amber';
+              spotMap[spot.name] = index < pollData.capacity ? 'green' : 'amber';
             } else {
               spotMap[spot.name] = 'blue';
             }
@@ -172,6 +214,17 @@
       }
     }
 
+    // Load both on page load and after key input
+    function refreshAll() {
+      if (adminKeyValid) {
+        loadRoster();
+        loadPoll();
+      } else {
+        document.getElementById('rosterList').innerHTML = '<p style="color:#888;">Enter admin key to view.</p>';
+        document.getElementById('pollView').innerHTML = '';
+      }
+    }
+
     async function addTestPlayers() {
       if (!adminKeyValid) return;
       const res = await fetch(`${API}/admin/add-test-players`, {
@@ -181,7 +234,7 @@
       });
       const data = await res.json();
       message.textContent = data.success ? '✅ Test players added & claimed.' : `❌ ${data.error || 'Failed'}`;
-      loadRoster();
+      refreshAll();
     }
 
     async function clearPoll() {
@@ -193,7 +246,7 @@
       });
       const data = await res.json();
       message.textContent = data.success ? '✅ Poll cleared.' : `❌ ${data.error || 'Failed'}`;
-      loadRoster();
+      refreshAll();
     }
 
     async function resetAll() {
@@ -208,7 +261,7 @@
       message.textContent = data.success ? '✅ All registrations and spots cleared.' : `❌ ${data.error || 'Failed'}`;
       showPasswordsEnabled = false;
       passcodeData = {};
-      loadRoster();
+      refreshAll();
     }
 
     function enablePasswords() {
@@ -216,7 +269,7 @@
       showPasswordsEnabled = true;
       passcodeData = {};
       message.textContent = '🔓 Passwords enabled. Tap on names to see.';
-      loadRoster();
+      loadRoster(); // reload to show passcodes
     }
 
     async function addNewMember() {
@@ -234,7 +287,7 @@
       } else {
         message.textContent = `❌ ${data.error || 'Failed'}`;
       }
-      loadRoster();
+      refreshAll();
     }
 
     async function removePlayer(name) {
@@ -251,11 +304,17 @@
       } else {
         message.textContent = `❌ ${data.error || 'Failed'}`;
       }
-      loadRoster();
+      refreshAll();
     }
 
-    loadRoster();
-    keyInput.addEventListener('input', () => { checkKey(); if (adminKeyValid) loadRoster(); });
+    // Initial load
+    refreshAll();
+
+    // Auto‑refresh poll every 10 seconds
+    setInterval(() => { if (adminKeyValid) loadPoll(); }, 10000);
+
+    // Re‑check key on input
+    keyInput.addEventListener('input', () => { checkKey(); refreshAll(); });
   </script>
 </body>
 </html>
