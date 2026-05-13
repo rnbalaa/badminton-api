@@ -6,19 +6,21 @@
   <title>Admin – Badminton Poll</title>
   <style>
     body { font-family: -apple-system, sans-serif; background: #1e1e2f; color: #ccc; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
-    .admin-card { background: #2a2a3c; padding: 30px; border-radius: 20px; text-align: center; max-width: 420px; width: 100%; }
+    .admin-card { background: #2a2a3c; padding: 30px; border-radius: 20px; text-align: center; max-width: 460px; width: 100%; }
     h2 { margin-bottom: 10px; }
     input { width: 80%; padding: 10px; margin: 10px 0; border-radius: 8px; border: 1px solid #555; background: #0f0f1a; color: #eee; text-align: center; }
     button { width: 100%; padding: 14px; margin: 8px 0; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; color: white; }
     .btn-clear { background: #c62828; }
     .btn-reset { background: #b71c1c; }
     .btn-roster { background: #1565c0; }
+    .btn-test { background: #2e7d32; }
     .btn-clear:hover { background: #e53935; }
     .btn-reset:hover { background: #d32f2f; }
     .btn-roster:hover { background: #1e88e5; }
+    .btn-test:hover { background: #388e3c; }
     .msg { margin-top: 15px; font-weight: bold; min-height: 24px; }
     .warning { color: #ff8a80; font-size: 0.85rem; margin-top: 5px; }
-    .roster { margin-top: 20px; text-align: left; max-height: 300px; overflow-y: auto; background: #0f0f1a; border-radius: 10px; padding: 12px; }
+    .roster { margin-top: 20px; text-align: left; max-height: 300px; overflow-y: auto; background: #0f0f1a; border-radius: 10px; padding: 12px; display: none; }
     .roster h3 { color: #fff; margin-top: 0; }
     .roster ul { list-style: none; padding: 0; margin: 0; }
     .roster li { padding: 4px 0; border-bottom: 1px solid #2a2a3c; color: #ddd; }
@@ -30,24 +32,28 @@
     <input type="password" id="adminKey" placeholder="Admin key" value="bundbppgmbh">
 
     <button class="btn-clear" onclick="clearPoll()">🧹 Clear Poll</button>
-    <p class="warning">Removes all spots only – registrations remain.</p>
+    <p class="warning">Removes all spots – registrations remain.</p>
 
     <button class="btn-reset" onclick="resetAll()">⚠️ Reset Everything</button>
     <p class="warning">Clears spots AND all registrations.</p>
 
     <button class="btn-roster" onclick="loadRoster()">👥 Registered Players</button>
-    <div id="roster" class="roster" style="display:none;"></div>
+
+    <button class="btn-test" onclick="addTestPlayers()">➕ Add 2 Test Players</button>
+    <p class="warning">Registers TestPlayer1 & TestPlayer2 (if names are free).</p>
 
     <div id="message" class="msg"></div>
+    <div id="roster" class="roster"></div>
   </div>
 
   <script>
     const API = 'https://pollapp-rlmm.onrender.com';
     const msg = document.getElementById('message');
     const rosterDiv = document.getElementById('roster');
+    const keyInput = document.getElementById('adminKey');
 
     async function clearPoll() {
-      const key = document.getElementById('adminKey').value;
+      const key = keyInput.value;
       const res = await fetch(`${API}/create-poll`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -59,7 +65,7 @@
 
     async function resetAll() {
       if (!confirm('This will delete ALL registrations and spots. Continue?')) return;
-      const key = document.getElementById('adminKey').value;
+      const key = keyInput.value;
       const res = await fetch(`${API}/admin/reset-all`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -70,14 +76,14 @@
     }
 
     async function loadRoster() {
-      const key = document.getElementById('adminKey').value;
+      const key = keyInput.value;
       try {
         const res = await fetch(`${API}/admin/registered?key=${encodeURIComponent(key)}`);
         const data = await res.json();
         if (res.ok) {
           rosterDiv.style.display = 'block';
           rosterDiv.innerHTML = '<h3>Registered Players</h3><ul>' +
-            data.registered.map(p => `<li>${p.name} ${p.isAdmin ? '🛡️' : ''}</li>`).join('') +
+            data.registered.map(p => `<li>${p.name}${p.isAdmin ? ' 🛡️' : ''} (reclaims: ${p.reclaims || 0})</li>`).join('') +
             '</ul>';
         } else {
           rosterDiv.style.display = 'block';
@@ -86,6 +92,23 @@
       } catch (e) {
         rosterDiv.style.display = 'block';
         rosterDiv.innerHTML = '<p style="color:#ff8a80">Network error.</p>';
+      }
+    }
+
+    async function addTestPlayers() {
+      const key = keyInput.value;
+      const res = await fetch(`${API}/admin/add-test-players`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminKey: key })
+      });
+      const data = await res.json();
+      if (data.success) {
+        msg.textContent = `✅ Test players added: ${data.added.map(p => p.name + ' ' + p.status).join(', ')}`;
+        // Automatically refresh roster
+        setTimeout(loadRoster, 500);
+      } else {
+        msg.textContent = `❌ ${data.error || 'Failed'}`;
       }
     }
   </script>
