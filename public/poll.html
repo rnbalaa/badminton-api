@@ -32,12 +32,16 @@
     .btn-reclaim:disabled { background:#ccc; color:#666; }
     hr { display:none; }
     .footer { text-align: center; margin-top: 20px; font-size: 0.75rem; color: #888; }
+    .counter { margin-left: 12px; color: #aaa; font-size: 0.7rem; }
   </style>
 </head>
 <body>
   <svg class="logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><filter id="panelShadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000" flood-opacity="0.35"/></filter><filter id="iconShadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="2" dy="4" stdDeviation="3" flood-color="#000" flood-opacity="0.4"/></filter><linearGradient id="drop" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f2f9ff"/><stop offset="100%" stop-color="#b8d8f8"/></linearGradient></defs><rect x="15" y="15" width="70" height="70" rx="18" fill="white" filter="url(#panelShadow)"/><g transform="translate(50,50) scale(0.8) translate(-50,-50)"><circle cx="50" cy="50" r="34" fill="url(#drop)" stroke="#e63946" stroke-width="7" filter="url(#iconShadow)"/><ellipse cx="40" cy="33" rx="8" ry="5" fill="white" opacity="0.5" transform="rotate(-25, 40, 33)"/><circle cx="44" cy="29" r="2" fill="white" opacity="0.8"/><text font-size="32" x="44" y="50" dominant-baseline="central" text-anchor="middle" font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji">🗳️</text><text font-size="32" x="56" y="50" dominant-baseline="central" text-anchor="middle" font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji">🏸</text></g></svg>
   <div class="card"><div class="poll-title" id="pollTitle"></div><div id="statusMsg" class="status-msg loading">Loading poll…</div><div id="spotsContainer" class="spots-list"></div><button id="claimBtn" class="btn btn-claim" disabled>🏸 Claim a Spot</button><button id="cancelBtn" class="btn btn-cancel" disabled style="display:none">Give Up</button></div>
-  <div class="footer">Badminton Poll v0.5.1</div>
+  <div class="footer">
+    Badminton Poll v0.5.1
+    <span id="visitCounter" class="counter">Visits: …</span>
+  </div>
   <script>
     const API='https://pollapp-rlmm.onrender.com';const token=localStorage.getItem('voterToken'),voterName=localStorage.getItem('voterName');
     const statusMsg=document.getElementById('statusMsg'),claimBtn=document.getElementById('claimBtn'),cancelBtn=document.getElementById('cancelBtn'),spotsContainer=document.getElementById('spotsContainer'),pollTitle=document.getElementById('pollTitle');
@@ -48,7 +52,7 @@
       if(!token||!voterName){ claimBtn.disabled=true; claimBtn.textContent='Register first to claim'; claimBtn.className='btn btn-claim'; return; }
       if(mySpot.hasSpot && mySpot.status==='active'){
         cancelBtn.style.display='block'; cancelBtn.disabled=false;
-        cancelBtn.textContent = `${voterName}: "Something came up"`;  // ← updated
+        cancelBtn.textContent = `${voterName}: "Something came up"`;
         cancelBtn.className='btn btn-cancel';
         claimBtn.style.display='none';
       } else if(mySpot.hasSpot && mySpot.status==='cancelled'){
@@ -64,7 +68,7 @@
         cancelBtn.style.display='none';
       } else {
         claimBtn.style.display='block'; claimBtn.disabled=false;
-        claimBtn.textContent = `${voterName}: "I want to Play?"`;  // ← updated
+        claimBtn.textContent = `${voterName}: "I want to Play?"`;
         claimBtn.className='btn btn-claim';
         cancelBtn.style.display='none';
       }
@@ -74,6 +78,18 @@
     claimBtn.addEventListener('click', doClaim); cancelBtn.addEventListener('click', doCancel);
     loadPoll(); setInterval(loadPoll,10000); window.addEventListener('focus',loadPoll);
     if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js');}
+
+    // Visit counter
+    async function updateCounter() {
+      try {
+        const res = await fetch(`${API}/counter`);
+        const data = await res.json();
+        document.getElementById('visitCounter').textContent = `Visits: ${data.count}`;
+      } catch (e) {
+        document.getElementById('visitCounter').textContent = 'Visits: —';
+      }
+    }
+    updateCounter();
   </script>
 </body>
 </html>
