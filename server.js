@@ -26,13 +26,11 @@ const VALID_NAMES = [
 const ADMIN_KEY = 'bundbppgmbh';
 app.use(express.static('public'));
 
-// ✅ AUTO-CREATE A DEFAULT POLL ON STARTUP
 currentPoll = {
   title: 'Test Poll (auto-created)',
   capacity: 8,
   spots: []
 };
-console.log(`📋 Default poll created: "${currentPoll.title}" (capacity ${currentPoll.capacity})`);
 
 // ===== ENDPOINTS =====
 
@@ -57,12 +55,10 @@ app.get('/voter', (req, res) => {
   res.json({ name: voters[token].name });
 });
 
-// Health check moved to /api/health
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'Badminton Poll API v0.1', voters: Object.keys(voters).length });
+  res.json({ status: 'Badminton Poll API v0.3', voters: Object.keys(voters).length });
 });
 
-// Serve the combined page at root
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/public/index.html');
 });
@@ -88,7 +84,8 @@ app.get('/current-poll', (req, res) => {
       claimedAt: s.claimedAt,
       cancelled: !!s.cancelledAt,
       cancelledAt: s.cancelledAt || null,
-      promoted: !!s.promoted
+      promoted: !!s.promoted,
+      reclaimed: !!s.reclaimed
     }))
   });
 });
@@ -97,30 +94,39 @@ app.get('/my-spot', (req, res) => {
   const token = req.query.token;
   if (!currentPoll) return res.json({ hasSpot: false, reason: 'no-poll' });
   if (!token || !voters[token]) return res.status(401).json({ error: 'Invalid token.' });
-  
+
   const active = currentPoll.spots.find(s => s.voterToken === token && !s.cancelledAt);
   const cancelled = currentPoll.spots.find(s => s.voterToken === token && s.cancelledAt);
-  
+
   if (active) return res.json({ hasSpot: true, status: 'active', name: active.voterName, claimedAt: active.claimedAt });
   if (cancelled) return res.json({ hasSpot: true, status: 'cancelled', name: cancelled.voterName, cancelledAt: cancelled.cancelledAt });
   return res.json({ hasSpot: false, status: 'none' });
 });
 
+// UPDATED claim-spot – NO BLOCK for previously cancelled
 app.post('/claim-spot', (req, res) => {
   const { token } = req.body;
   if (!currentPoll) return res.status(400).json({ error: 'No active poll.' });
   if (!token || !voters[token]) return res.status(401).json({ error: 'Invalid or missing token.' });
-  
+
   const voter = voters[token];
+
+  // Only block if already holding an active spot (has not cancelled)
   if (currentPoll.spots.find(s => s.voterToken === token && !s.cancelledAt)) {
-    return res.status(409).json({ error: 'You already claimed a spot.' });
+    return res.status(409).json({ error: 'You already have an active spot.' });
   }
-  if (currentPoll.spots.find(s => s.voterToken === token && s.cancelledAt)) {
-    return res.status(403).json({ error: 'You have already cancelled and cannot reclaim.' });
-  }
-  
-  const spot = { voterToken: token, voterName: voter.name, claimedAt: new Date().toISOString(), cancelledAt: null, promoted: false };
+
+  const hasCancelledBefore = currentPoll.spots.some(s => s.voterToken === token && s.cancelledAt);
+  const spot = {
+    voterToken: token,
+    voterName: voter.name,
+    claimedAt: new Date().toISOString(),
+    cancelledAt: null,
+    promoted: false,
+    reclaimed: hasCancelledBefore
+  };
   currentPoll.spots.push(spot);
+  console.log(`✅ ${voter.name} claimed (reclaimed: ${hasCancelledBefore})`);
   res.json({ success: true, spot });
 });
 
@@ -128,12 +134,12 @@ app.post('/cancel-spot', (req, res) => {
   const { token } = req.body;
   if (!currentPoll) return res.status(400).json({ error: 'No active poll.' });
   if (!token || !voters[token]) return res.status(401).json({ error: 'Invalid or missing token.' });
-  
+
   const spot = currentPoll.spots.find(s => s.voterToken === token && !s.cancelledAt);
   if (!spot) return res.status(404).json({ error: 'You have no active spot to cancel.' });
   spot.cancelledAt = new Date().toISOString();
 
-  // Promote the first waitlisted (amber) player automatically
+  // Promote first waitlisted player
   const activeSpots = currentPoll.spots.filter(s => !s.cancelledAt);
   const capacity = currentPoll.capacity;
   for (let i = 0; i < activeSpots.length; i++) {
@@ -144,8 +150,31 @@ app.post('/cancel-spot', (req, res) => {
       break;
     }
   }
-
   res.json({ success: true, spot });
+});
+
+// ==================== ADMIN ENDPOINTS ====================
+
+app.post('/admin/reset-all', (req, res) => {
+  const { adminKey } = req.body;
+  if (adminKey !== ADMIN_KEY) return res.status(403).json({ error: 'Invalid admin key.' });
+  for (const token in voters) delete voters[token];
+  for (const name in claimedNames) delete claimedNames[name];
+  currentPoll = { title: 'Test Poll (auto-created)', capacity: 8, spots: [] };
+  console.log('🔄 Full reset performed');
+  res.json({ success: true });
+});
+
+// NEW: list registered players (names only, no tokens)
+app.get('/admin/registered', (req, res) => {
+  const adminKey = req.query.key;
+  if (adminKey !== ADMIN_KEY) return res.status(403).json({ error: 'Invalid admin key.' });
+  const registered = Object.entries(voters).map(([token, info]) => ({
+    name: info.name,
+    isAdmin: info.isAdmin
+  }));
+  registered.sort((a, b) => a.name.localeCompare(b.name));
+  res.json({ registered });
 });
 
 const PORT = process.env.PORT || 3000;
