@@ -12,8 +12,9 @@
     .logo { width: 80px; height: 80px; margin: 10px 0; }
     .admin-card { background: white; border-radius: 20px; padding: 24px; box-shadow: 0 8px 30px rgba(0,0,0,0.12); max-width: 500px; width: 100%; display: flex; flex-direction: column; }
     h2 { text-align: center; margin: 0 0 10px; color: #1e1e1e; }
-    .key-area { text-align: center; margin-bottom: 15px; }
-    .key-area input { width: 80%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; text-align: center; font-size: 1rem; }
+    .login-area { text-align: center; margin-bottom: 15px; }
+    .login-area input { width: 80%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; text-align: center; font-size: 1rem; }
+    .login-btn { background: #1565c0; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; }
     .roster, .poll-section { margin-bottom: 20px; }
     .roster h3, .poll-section h3 { color: #1e1e1e; margin: 0 0 10px; }
     .roster-list { max-height: 35vh; overflow-y: auto; }
@@ -58,8 +59,14 @@
 
   <div class="admin-card">
     <h2>Admin Controls</h2>
-    <div class="key-area">
-      <input type="password" id="adminKey" placeholder="Admin key" value="bundbppgmbh" oninput="checkKey()">
+
+    <!-- Login / Password area (hidden initially) -->
+    <div id="loginArea" class="login-area hidden">
+      <input type="password" id="adminKey" placeholder="Admin key" oninput="checkKey()">
+      <br><small style="color:#888;">Enter admin key to unlock controls</small>
+    </div>
+    <div id="loginBtnArea" class="login-area">
+      <button class="login-btn" onclick="showLogin()">🔐 Admin Login</button>
     </div>
 
     <!-- Registered Players (top, scrollable) -->
@@ -100,21 +107,32 @@
     let passcodeData = {};
     let pollVisible = false;
 
+    function showLogin() {
+      document.getElementById('loginBtnArea').classList.add('hidden');
+      document.getElementById('loginArea').classList.remove('hidden');
+      keyInput.value = ''; // clear previous
+      keyInput.focus();
+    }
+
     function checkKey() {
-      adminKeyValid = (keyInput.value === 'bundbppgmbh');
-      const controls = document.getElementById('adminControls');
-      if (adminKeyValid) {
-        controls.classList.remove('hidden');
-      } else {
-        controls.classList.add('hidden');
-        showPasswordsEnabled = false;
-        // hide poll section if visible
-        document.getElementById('pollSection').classList.add('hidden');
-        pollVisible = false;
-        document.getElementById('togglePollBtn').textContent = 'Show Poll';
+      const newKeyValid = (keyInput.value === 'bundbppgmbh');
+      if (newKeyValid !== adminKeyValid) {
+        adminKeyValid = newKeyValid;
+        const controls = document.getElementById('adminControls');
+        if (adminKeyValid) {
+          controls.classList.remove('hidden');
+          // hide password input again after successful login
+          document.getElementById('loginArea').classList.add('hidden');
+        } else {
+          controls.classList.add('hidden');
+          showPasswordsEnabled = false;
+          document.getElementById('pollSection').classList.add('hidden');
+          pollVisible = false;
+          document.getElementById('togglePollBtn').textContent = 'Show Poll';
+        }
+        refreshAll();
       }
     }
-    checkKey();
 
     // ========== Load Poll ==========
     async function loadPoll() {
@@ -160,7 +178,7 @@
         section.classList.remove('hidden');
         btn.textContent = 'Hide Poll';
         pollVisible = true;
-        loadPoll(); // refresh poll data
+        loadPoll();
       }
     }
 
@@ -310,11 +328,8 @@
 
     // Initial load
     refreshAll();
-
-    // Auto‑refresh every 10 seconds
     setInterval(refreshAll, 10000);
-
-    keyInput.addEventListener('input', () => { checkKey(); refreshAll(); });
+    keyInput.addEventListener('input', checkKey);
   </script>
 </body>
 </html>
