@@ -16,12 +16,9 @@
     .key-area input { width: 80%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; text-align: center; font-size: 1rem; }
     .roster, .poll-section { margin-bottom: 20px; }
     .roster h3, .poll-section h3 { color: #1e1e1e; margin: 0 0 10px; }
-    .roster-list, .poll-spot-list { max-height: 25vh; overflow-y: auto; }
-    .player-row, .spot-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #eee; }
+    .roster-list { max-height: 35vh; overflow-y: auto; }
+    .player-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #eee; }
     .player-name { font-weight: 500; }
-    .player-actions { display: flex; gap: 5px; }
-    .player-actions button { background: none; border: none; cursor: pointer; font-size: 1rem; padding: 2px 6px; border-radius: 4px; }
-    .player-actions button:hover { background: #f0f0f0; }
     .passcode-reveal { font-size: 0.85rem; color: #555; margin-left: 8px; }
     .poll-spot-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 0.9rem; }
     .poll-spot-name { font-weight: 500; }
@@ -35,8 +32,11 @@
     .btn-reset { background: #b71c1c; }
     .btn-passwords { background: #1565c0; }
     .btn-add-member { background: #00695c; }
+    .btn-show-poll { background: #1565c0; }
+    .btn-hide-poll { background: #888; }
     .footer { text-align: center; margin-top: 20px; font-size: 0.75rem; color: #888; }
     .msg { margin-top: 10px; font-weight: bold; text-align: center; min-height: 20px; }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
@@ -68,22 +68,23 @@
       <div id="rosterList" class="roster-list"></div>
     </div>
 
-    <!-- Current Poll View -->
-    <div class="poll-section">
+    <!-- Current Poll (hidden by default) -->
+    <div id="pollSection" class="poll-section hidden">
       <h3>Current Poll</h3>
       <div id="pollView"></div>
     </div>
 
-    <!-- Buttons (bottom) -->
-    <div class="btn-section">
+    <!-- Admin control buttons (hidden until key is valid) -->
+    <div id="adminControls" class="btn-section hidden">
       <div class="btn-row">
-        <button class="btn btn-test" id="addTestBtn" disabled onclick="addTestPlayers()">Add Test Players</button>
-        <button class="btn btn-clear-poll" id="clearPollBtn" disabled onclick="clearPoll()">Clear Current Poll</button>
-        <button class="btn btn-reset" id="resetBtn" disabled onclick="resetAll()">Clear Registration</button>
+        <button class="btn btn-test" id="addTestBtn" onclick="addTestPlayers()">Add Test Players</button>
+        <button class="btn btn-show-poll" id="togglePollBtn" onclick="togglePoll()">Show Poll</button>
+        <button class="btn btn-clear-poll" id="clearPollBtn" onclick="clearPoll()">Clear Current Poll</button>
+        <button class="btn btn-reset" id="resetBtn" onclick="resetAll()">Clear Registration</button>
       </div>
       <div class="btn-row">
-        <button class="btn btn-passwords" id="passwordsBtn" disabled onclick="enablePasswords()">See Passwords</button>
-        <button class="btn btn-add-member" id="addMemberBtn" disabled onclick="addNewMember()">Add New Member</button>
+        <button class="btn btn-passwords" id="passwordsBtn" onclick="enablePasswords()">See Passwords</button>
+        <button class="btn btn-add-member" id="addMemberBtn" onclick="addNewMember()">Add New Member</button>
       </div>
       <div id="message" class="msg"></div>
     </div>
@@ -97,15 +98,21 @@
     let adminKeyValid = false;
     let showPasswordsEnabled = false;
     let passcodeData = {};
+    let pollVisible = false;
 
     function checkKey() {
       adminKeyValid = (keyInput.value === 'bundbppgmbh');
-      document.getElementById('addTestBtn').disabled = !adminKeyValid;
-      document.getElementById('clearPollBtn').disabled = !adminKeyValid;
-      document.getElementById('resetBtn').disabled = !adminKeyValid;
-      document.getElementById('passwordsBtn').disabled = !adminKeyValid;
-      document.getElementById('addMemberBtn').disabled = !adminKeyValid;
-      if (!adminKeyValid) showPasswordsEnabled = false;
+      const controls = document.getElementById('adminControls');
+      if (adminKeyValid) {
+        controls.classList.remove('hidden');
+      } else {
+        controls.classList.add('hidden');
+        showPasswordsEnabled = false;
+        // hide poll section if visible
+        document.getElementById('pollSection').classList.add('hidden');
+        pollVisible = false;
+        document.getElementById('togglePollBtn').textContent = 'Show Poll';
+      }
     }
     checkKey();
 
@@ -139,6 +146,21 @@
         pollDiv.innerHTML = html;
       } catch (e) {
         document.getElementById('pollView').innerHTML = '<p style="color:#c62828;">Could not load poll.</p>';
+      }
+    }
+
+    function togglePoll() {
+      const section = document.getElementById('pollSection');
+      const btn = document.getElementById('togglePollBtn');
+      if (pollVisible) {
+        section.classList.add('hidden');
+        btn.textContent = 'Show Poll';
+        pollVisible = false;
+      } else {
+        section.classList.remove('hidden');
+        btn.textContent = 'Hide Poll';
+        pollVisible = true;
+        loadPoll(); // refresh poll data
       }
     }
 
@@ -191,21 +213,18 @@
         let html = '';
         players.forEach(p => {
           const color = spotMap[p.name] || 'black';
-          let actions = '';
-          if (adminKeyValid) {
-            actions += `<button onclick="removePlayer('${p.name}')" title="Remove registration">❌</button>`;
-            if (showPasswordsEnabled) {
-              const pass = passcodeData[p.name] !== undefined ? (passcodeData[p.name] || '—') : '—';
-              actions += `<span class="passcode-reveal" id="pass-${p.name}">${pass}</span>`;
-              setTimeout(() => {
-                const el = document.getElementById(`pass-${p.name}`);
-                if (el) el.textContent = '';
-              }, 3000);
-            }
+          let extras = '';
+          if (showPasswordsEnabled) {
+            const pass = passcodeData[p.name] !== undefined ? (passcodeData[p.name] || '—') : '—';
+            extras += `<span class="passcode-reveal" id="pass-${p.name}">${pass}</span>`;
+            setTimeout(() => {
+              const el = document.getElementById(`pass-${p.name}`);
+              if (el) el.textContent = '';
+            }, 3000);
           }
           html += `<div class="player-row">
             <span class="player-name" style="color:${color};">${p.name}${p.isAdmin ? ' 🛡️' : ''}</span>
-            <div class="player-actions">${actions}</div>
+            <div>${extras}</div>
           </div>`;
         });
         document.getElementById('rosterList').innerHTML = html;
@@ -214,11 +233,10 @@
       }
     }
 
-    // Load both on page load and after key input
     function refreshAll() {
       if (adminKeyValid) {
         loadRoster();
-        loadPoll();
+        if (pollVisible) loadPoll();
       } else {
         document.getElementById('rosterList').innerHTML = '<p style="color:#888;">Enter admin key to view.</p>';
         document.getElementById('pollView').innerHTML = '';
@@ -269,7 +287,7 @@
       showPasswordsEnabled = true;
       passcodeData = {};
       message.textContent = '🔓 Passwords enabled. Tap on names to see.';
-      loadRoster(); // reload to show passcodes
+      loadRoster();
     }
 
     async function addNewMember() {
@@ -290,30 +308,12 @@
       refreshAll();
     }
 
-    async function removePlayer(name) {
-      if (!adminKeyValid) return;
-      if (!confirm(`Remove registration for ${name}? This will free the name.`)) return;
-      const res = await fetch(`${API}/admin/remove-registration`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminKey: keyInput.value, name })
-      });
-      const data = await res.json();
-      if (data.success) {
-        message.textContent = `✅ ${name} removed.`;
-      } else {
-        message.textContent = `❌ ${data.error || 'Failed'}`;
-      }
-      refreshAll();
-    }
-
     // Initial load
     refreshAll();
 
-    // Auto‑refresh poll every 10 seconds
-    setInterval(() => { if (adminKeyValid) loadPoll(); }, 10000);
+    // Auto‑refresh every 10 seconds
+    setInterval(refreshAll, 10000);
 
-    // Re‑check key on input
     keyInput.addEventListener('input', () => { checkKey(); refreshAll(); });
   </script>
 </body>
