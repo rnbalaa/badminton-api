@@ -1,7 +1,28 @@
 const express = require('express');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const app = express();
 const VERSION = '0.5.1';
+const COUNTER_FILE = path.join(__dirname, 'counter.json');
+
+// Persistent counter
+let visitCounter = 0;
+try {
+  const data = fs.readFileSync(COUNTER_FILE, 'utf8');
+  visitCounter = JSON.parse(data).count || 0;
+  console.log(`📊 Visit counter loaded: ${visitCounter}`);
+} catch (err) {
+  visitCounter = 0;
+}
+
+function saveCounter() {
+  try {
+    fs.writeFileSync(COUNTER_FILE, JSON.stringify({ count: visitCounter }), 'utf8');
+  } catch (err) {
+    console.error('Could not save counter:', err.message);
+  }
+}
 
 app.use(express.json());
 app.use((req, res, next) => {
@@ -11,8 +32,8 @@ app.use((req, res, next) => {
 });
 
 // ===== IN-MEMORY STORE =====
-const voters = {};          // token -> { name, isAdmin, reclaimCount, passcode }
-const claimedNames = {};    // name -> token
+const voters = {};
+const claimedNames = {};
 let currentPoll = null;
 
 const VALID_NAMES = [
@@ -38,6 +59,18 @@ currentPoll = {
 
 // ===== ENDPOINTS =====
 
+// Root: serve page + increment counter
+app.get('/', (req, res) => {
+  visitCounter++;
+  saveCounter();
+  res.sendFile(__dirname + '/public/index.html');
+});
+
+// Counter read
+app.get('/counter', (req, res) => {
+  res.json({ count: visitCounter });
+});
+
 app.get('/available-names', (req, res) => {
   const available = VALID_NAMES.filter(name => !claimedNames[name]);
   res.json({ available, total: VALID_NAMES.length, claimed: Object.keys(claimedNames).length });
@@ -61,10 +94,6 @@ app.get('/voter', (req, res) => {
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'Badminton Poll API', version: VERSION, voters: Object.keys(voters).length });
-});
-
-app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/public/index.html');
 });
 
 // ==================== POLLING ====================
@@ -197,13 +226,12 @@ app.get('/admin/registered', (req, res) => {
     name: info.name,
     isAdmin: info.isAdmin,
     reclaims: info.reclaimCount || 0,
-    passcode: info.passcode   // now included (may be null)
+    passcode: info.passcode
   }));
   registered.sort((a, b) => a.name.localeCompare(b.name));
   res.json({ registered });
 });
 
-// ADMIN: Add two test players AND auto‑claim a spot for each
 app.post('/admin/add-test-players', (req, res) => {
   const { adminKey } = req.body;
   if (adminKey !== ADMIN_KEY) return res.status(403).json({ error: 'Invalid admin key.' });
@@ -217,7 +245,6 @@ app.post('/admin/add-test-players', (req, res) => {
     const token = crypto.randomUUID();
     voters[token] = { name, isAdmin: false, reclaimCount: 0, passcode: null };
     claimedNames[name] = token;
-    // Auto‑claim spot
     if (currentPoll) {
       currentPoll.spots.push({
         voterToken: token,
@@ -233,7 +260,6 @@ app.post('/admin/add-test-players', (req, res) => {
   res.json({ success: true, added });
 });
 
-// ADMIN: Remove a player's registration (free the name)
 app.post('/admin/remove-registration', (req, res) => {
   const { adminKey, name } = req.body;
   if (adminKey !== ADMIN_KEY) return res.status(403).json({ error: 'Invalid admin key.' });
@@ -241,7 +267,6 @@ app.post('/admin/remove-registration', (req, res) => {
   const token = claimedNames[name];
   delete voters[token];
   delete claimedNames[name];
-  // Also remove any spots for this voter from current poll (if any)
   if (currentPoll) {
     currentPoll.spots = currentPoll.spots.filter(s => s.voterToken !== token);
   }
@@ -249,7 +274,6 @@ app.post('/admin/remove-registration', (req, res) => {
   res.json({ success: true });
 });
 
-// ADMIN: Add new member names (comma-separated) to the valid names list
 app.post('/admin/add-names', (req, res) => {
   const { adminKey, names } = req.body;
   if (adminKey !== ADMIN_KEY) return res.status(403).json({ error: 'Invalid admin key.' });
@@ -266,7 +290,6 @@ app.post('/admin/add-names', (req, res) => {
   res.json({ success: true, added });
 });
 
-// ADMIN: Get passcodes for all voters (admin only)
 app.get('/admin/passcodes', (req, res) => {
   const adminKey = req.query.key;
   if (adminKey !== ADMIN_KEY) return res.status(403).json({ error: 'Invalid admin key.' });
