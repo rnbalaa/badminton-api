@@ -47,7 +47,9 @@
       claimBtn.style.display='block'; cancelBtn.style.display='none';
       if(!token||!voterName){ claimBtn.disabled=true; claimBtn.textContent='Register first to claim'; claimBtn.className='btn btn-claim'; return; }
       if(mySpot.hasSpot && mySpot.status==='active'){
-        cancelBtn.style.display='block'; cancelBtn.disabled=false; cancelBtn.textContent = `${voterName}, Something came up, Exiting`; cancelBtn.className='btn btn-cancel';
+        cancelBtn.style.display='block'; cancelBtn.disabled=false;
+        cancelBtn.textContent = `${voterName}: "Something came up"`;  // ← updated
+        cancelBtn.className='btn btn-cancel';
         claimBtn.style.display='none';
       } else if(mySpot.hasSpot && mySpot.status==='cancelled'){
         claimBtn.style.display='block';
@@ -56,12 +58,14 @@
           claimBtn.textContent = `Oops No ${voterName}`;
         } else {
           claimBtn.disabled = false;
-          claimBtn.textContent = `${voterName} : "I wanna Joinback"`;
+          claimBtn.textContent = `${voterName}: "I wanna Joinback"`;
         }
         claimBtn.className = 'btn btn-reclaim';
         cancelBtn.style.display='none';
       } else {
-        claimBtn.style.display='block'; claimBtn.disabled=false; claimBtn.textContent = `${voterName} "Wanna Play?"`; claimBtn.className='btn btn-claim';
+        claimBtn.style.display='block'; claimBtn.disabled=false;
+        claimBtn.textContent = `${voterName}: "I want to Play?"`;  // ← updated
+        claimBtn.className='btn btn-claim';
         cancelBtn.style.display='none';
       }
     }

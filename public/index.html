@@ -144,7 +144,9 @@
       claimBtn.classList.remove('hidden'); cancelBtn.classList.add('hidden');
       if(!token||!voterName){ claimBtn.disabled=true; claimBtn.textContent='Register first to claim'; claimBtn.className='btn btn-claim'; return; }
       if(mySpot.hasSpot && mySpot.status==='active'){
-        cancelBtn.classList.remove('hidden'); cancelBtn.disabled=false; cancelBtn.textContent = `${voterName}, Something came up, Exiting`; cancelBtn.className='btn btn-cancel';
+        cancelBtn.classList.remove('hidden'); cancelBtn.disabled=false;
+        cancelBtn.textContent = `${voterName}: "Something came up"`;  // ← updated
+        cancelBtn.className='btn btn-cancel';
         claimBtn.classList.add('hidden');
       } else if(mySpot.hasSpot && mySpot.status==='cancelled'){
         claimBtn.classList.remove('hidden');
@@ -153,12 +155,14 @@
           claimBtn.textContent = `Oops No ${voterName}`;
         } else {
           claimBtn.disabled = false;
-          claimBtn.textContent = `${voterName} : "I wanna Joinback"`;
+          claimBtn.textContent = `${voterName}: "I wanna Joinback"`;
         }
         claimBtn.className = 'btn btn-reclaim';
         cancelBtn.classList.add('hidden');
       } else {
-        claimBtn.classList.remove('hidden'); claimBtn.disabled=false; claimBtn.textContent = `${voterName} "Wanna Play?"`; claimBtn.className='btn btn-claim';
+        claimBtn.classList.remove('hidden'); claimBtn.disabled=false;
+        claimBtn.textContent = `${voterName}: "I want to Play?"`;  // ← updated
+        claimBtn.className='btn btn-claim';
         cancelBtn.classList.add('hidden');
       }
     }
