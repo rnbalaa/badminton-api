@@ -4,113 +4,260 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin – Badminton Poll</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#c8e6c9">
+  <link rel="apple-touch-icon" sizes="180x180" href="/logo.svg">
   <style>
-    body { font-family: -apple-system, sans-serif; background: #1e1e2f; color: #ccc; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
-    .admin-card { background: #2a2a3c; padding: 30px; border-radius: 20px; text-align: center; max-width: 460px; width: 100%; }
-    h2 { margin-bottom: 10px; }
-    input { width: 80%; padding: 10px; margin: 10px 0; border-radius: 8px; border: 1px solid #555; background: #0f0f1a; color: #eee; text-align: center; }
-    button { width: 100%; padding: 14px; margin: 8px 0; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; color: white; }
-    .btn-clear { background: #c62828; }
-    .btn-reset { background: #b71c1c; }
-    .btn-roster { background: #1565c0; }
+    body { font-family: -apple-system, 'Segoe UI', sans-serif; background: #c8e6c9; margin: 0; padding: 20px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
+    .logo { width: 80px; height: 80px; margin: 10px 0; }
+    .admin-card { background: white; border-radius: 20px; padding: 24px; box-shadow: 0 8px 30px rgba(0,0,0,0.12); max-width: 500px; width: 100%; }
+    h2 { text-align: center; margin: 0 0 10px; color: #1e1e1e; }
+    .key-area { text-align: center; margin-bottom: 15px; }
+    .key-area input { width: 80%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; text-align: center; font-size: 1rem; }
+    .btn-row { display: flex; justify-content: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+    .btn { padding: 8px 16px; border: none; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; color: white; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .btn-test { background: #2e7d32; }
-    .btn-clear:hover { background: #e53935; }
-    .btn-reset:hover { background: #d32f2f; }
-    .btn-roster:hover { background: #1e88e5; }
-    .btn-test:hover { background: #388e3c; }
-    .msg { margin-top: 15px; font-weight: bold; min-height: 24px; }
-    .warning { color: #ff8a80; font-size: 0.85rem; margin-top: 5px; }
-    .roster { margin-top: 20px; text-align: left; max-height: 300px; overflow-y: auto; background: #0f0f1a; border-radius: 10px; padding: 12px; display: none; }
-    .roster h3 { color: #fff; margin-top: 0; }
-    .roster ul { list-style: none; padding: 0; margin: 0; }
-    .roster li { padding: 4px 0; border-bottom: 1px solid #2a2a3c; color: #ddd; }
+    .btn-clear-poll { background: #c62828; }
+    .btn-reset { background: #b71c1c; }
+    .btn-passwords { background: #1565c0; }
+    .btn-add-member { background: #00695c; }
+    .roster { margin-top: 20px; }
+    .roster h3 { color: #1e1e1e; margin: 0 0 10px; }
+    .player-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #eee; }
+    .player-name { font-weight: 500; }
+    .player-actions { display: flex; gap: 5px; }
+    .player-actions button { background: none; border: none; cursor: pointer; font-size: 1rem; padding: 2px 6px; border-radius: 4px; }
+    .player-actions button:hover { background: #f0f0f0; }
+    .passcode-reveal { font-size: 0.85rem; color: #555; margin-left: 8px; }
+    .footer { text-align: center; margin-top: 20px; font-size: 0.75rem; color: #888; }
+    .msg { margin-top: 10px; font-weight: bold; text-align: center; min-height: 20px; }
   </style>
 </head>
 <body>
+  <svg class="logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <filter id="panelShadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000" flood-opacity="0.35"/></filter>
+      <filter id="iconShadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="2" dy="4" stdDeviation="3" flood-color="#000" flood-opacity="0.4"/></filter>
+      <linearGradient id="drop" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f2f9ff"/><stop offset="100%" stop-color="#b8d8f8"/></linearGradient>
+    </defs>
+    <rect x="15" y="15" width="70" height="70" rx="18" fill="white" filter="url(#panelShadow)"/>
+    <g transform="translate(50,50) scale(0.8) translate(-50,-50)">
+      <circle cx="50" cy="50" r="34" fill="url(#drop)" stroke="#e63946" stroke-width="7" filter="url(#iconShadow)"/>
+      <ellipse cx="40" cy="33" rx="8" ry="5" fill="white" opacity="0.5" transform="rotate(-25, 40, 33)"/>
+      <circle cx="44" cy="29" r="2" fill="white" opacity="0.8"/>
+      <text font-size="32" x="44" y="50" dominant-baseline="central" text-anchor="middle" font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji">🗳️</text>
+      <text font-size="32" x="56" y="50" dominant-baseline="central" text-anchor="middle" font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji">🏸</text>
+    </g>
+  </svg>
+
   <div class="admin-card">
-    <h2>🔐 Admin Controls</h2>
-    <input type="password" id="adminKey" placeholder="Admin key" value="bundbppgmbh">
+    <h2>Admin Controls</h2>
+    <div class="key-area">
+      <input type="password" id="adminKey" placeholder="Admin key" value="bundbppgmbh" oninput="checkKey()">
+    </div>
 
-    <button class="btn-clear" onclick="clearPoll()">🧹 Clear Poll</button>
-    <p class="warning">Removes all spots – registrations remain.</p>
+    <div class="btn-row">
+      <button class="btn btn-test" id="addTestBtn" disabled onclick="addTestPlayers()">Add Test Players</button>
+      <button class="btn btn-clear-poll" id="clearPollBtn" disabled onclick="clearPoll()">Clear Current Poll</button>
+      <button class="btn btn-reset" id="resetBtn" disabled onclick="resetAll()">Clear Registration</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-passwords" id="passwordsBtn" disabled onclick="enablePasswords()">See Passwords</button>
+      <button class="btn btn-add-member" id="addMemberBtn" disabled onclick="addNewMember()">Add New Member</button>
+    </div>
 
-    <button class="btn-reset" onclick="resetAll()">⚠️ Reset Everything</button>
-    <p class="warning">Clears spots AND all registrations.</p>
-
-    <button class="btn-roster" onclick="loadRoster()">👥 Registered Players</button>
-
-    <button class="btn-test" onclick="addTestPlayers()">➕ Add 2 Test Players</button>
-    <p class="warning">Registers TestPlayer1 & TestPlayer2 (if names are free).</p>
+    <div class="roster">
+      <h3>Registered Players</h3>
+      <div id="rosterList"></div>
+    </div>
 
     <div id="message" class="msg"></div>
-    <div id="roster" class="roster"></div>
   </div>
+  <div class="footer">Badminton Poll v0.5.1</div>
 
   <script>
     const API = 'https://pollapp-rlmm.onrender.com';
-    const msg = document.getElementById('message');
-    const rosterDiv = document.getElementById('roster');
     const keyInput = document.getElementById('adminKey');
+    const message = document.getElementById('message');
+    let adminKeyValid = false;
+    let showPasswordsEnabled = false;
+    let passcodeData = {};
 
-    async function clearPoll() {
-      const key = keyInput.value;
-      const res = await fetch(`${API}/create-poll`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminKey: key, title: 'Test Poll (auto-created)', capacity: 8 })
-      });
-      const data = await res.json();
-      msg.textContent = data.success ? '✅ Poll cleared. All spots removed.' : `❌ ${data.error || 'Failed'}`;
+    // Check key validity (simple local check)
+    function checkKey() {
+      adminKeyValid = (keyInput.value === 'bundbppgmbh');
+      document.getElementById('addTestBtn').disabled = !adminKeyValid;
+      document.getElementById('clearPollBtn').disabled = !adminKeyValid;
+      document.getElementById('resetBtn').disabled = !adminKeyValid;
+      document.getElementById('passwordsBtn').disabled = !adminKeyValid;
+      document.getElementById('addMemberBtn').disabled = !adminKeyValid;
+      if (!adminKeyValid) showPasswordsEnabled = false;
     }
-
-    async function resetAll() {
-      if (!confirm('This will delete ALL registrations and spots. Continue?')) return;
-      const key = keyInput.value;
-      const res = await fetch(`${API}/admin/reset-all`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminKey: key })
-      });
-      const data = await res.json();
-      msg.textContent = data.success ? '✅ Everything reset. All registrations and spots cleared.' : `❌ ${data.error || 'Failed'}`;
-    }
+    checkKey(); // initial check
 
     async function loadRoster() {
-      const key = keyInput.value;
+      if (!adminKeyValid) {
+        document.getElementById('rosterList').innerHTML = '<p style="color:#888;">Enter admin key to view.</p>';
+        return;
+      }
       try {
-        const res = await fetch(`${API}/admin/registered?key=${encodeURIComponent(key)}`);
-        const data = await res.json();
-        if (res.ok) {
-          rosterDiv.style.display = 'block';
-          rosterDiv.innerHTML = '<h3>Registered Players</h3><ul>' +
-            data.registered.map(p => `<li>${p.name}${p.isAdmin ? ' 🛡️' : ''} (reclaims: ${p.reclaims || 0})</li>`).join('') +
-            '</ul>';
-        } else {
-          rosterDiv.style.display = 'block';
-          rosterDiv.innerHTML = `<p style="color:#ff8a80">${data.error || 'Failed to fetch'}</p>`;
+        const [regRes, pollRes] = await Promise.all([
+          fetch(`${API}/admin/registered?key=${encodeURIComponent(keyInput.value)}`),
+          fetch(`${API}/current-poll`)
+        ]);
+        const regData = await regRes.json();
+        const pollData = await pollRes.json();
+
+        if (!regRes.ok) {
+          document.getElementById('rosterList').innerHTML = `<p style="color:#c62828;">${regData.error}</p>`;
+          return;
         }
+
+        // Build color map from poll spots
+        const spotMap = {};
+        if (pollData.exists) {
+          pollData.spots.forEach((spot, index) => {
+            if (!spot.cancelled) {
+              const isGreen = index < pollData.capacity;
+              spotMap[spot.name] = isGreen ? 'green' : 'amber';
+            } else {
+              spotMap[spot.name] = 'blue';
+            }
+          });
+        }
+
+        // Fetch passcodes if we are in show mode
+        if (showPasswordsEnabled) {
+          try {
+            const passRes = await fetch(`${API}/admin/passcodes?key=${encodeURIComponent(keyInput.value)}`);
+            if (passRes.ok) {
+              const passData = await passRes.json();
+              passData.passcodes.forEach(p => { passcodeData[p.name] = p.passcode; });
+            }
+          } catch (e) {}
+        }
+
+        // Render roster
+        const players = regData.registered;
+        if (players.length === 0) {
+          document.getElementById('rosterList').innerHTML = '<p style="color:#888;">No registered players.</p>';
+          return;
+        }
+
+        let html = '';
+        players.forEach(p => {
+          const color = spotMap[p.name] || 'black';
+          let actions = '';
+          if (adminKeyValid) {
+            actions += `<button onclick="removePlayer('${p.name}')" title="Remove registration">❌</button>`;
+            if (showPasswordsEnabled) {
+              const pass = passcodeData[p.name] !== undefined ? (passcodeData[p.name] || '—') : '—';
+              actions += `<span class="passcode-reveal" id="pass-${p.name}">${pass}</span>`;
+              // Schedule hiding after 3 seconds
+              setTimeout(() => {
+                const el = document.getElementById(`pass-${p.name}`);
+                if (el) el.textContent = '';
+              }, 3000);
+            }
+          }
+          html += `<div class="player-row">
+            <span class="player-name" style="color:${color};">${p.name}${p.isAdmin ? ' 🛡️' : ''}</span>
+            <div class="player-actions">${actions}</div>
+          </div>`;
+        });
+        document.getElementById('rosterList').innerHTML = html;
       } catch (e) {
-        rosterDiv.style.display = 'block';
-        rosterDiv.innerHTML = '<p style="color:#ff8a80">Network error.</p>';
+        document.getElementById('rosterList').innerHTML = '<p style="color:#c62828;">Error loading roster.</p>';
       }
     }
 
     async function addTestPlayers() {
-      const key = keyInput.value;
+      if (!adminKeyValid) return;
       const res = await fetch(`${API}/admin/add-test-players`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminKey: key })
+        body: JSON.stringify({ adminKey: keyInput.value })
+      });
+      const data = await res.json();
+      message.textContent = data.success ? '✅ Test players added & claimed.' : `❌ ${data.error || 'Failed'}`;
+      loadRoster();
+    }
+
+    async function clearPoll() {
+      if (!adminKeyValid) return;
+      const res = await fetch(`${API}/create-poll`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminKey: keyInput.value, title: 'Test Poll (auto-created)', capacity: 8 })
+      });
+      const data = await res.json();
+      message.textContent = data.success ? '✅ Poll cleared.' : `❌ ${data.error || 'Failed'}`;
+      loadRoster();
+    }
+
+    async function resetAll() {
+      if (!adminKeyValid) return;
+      if (!confirm('This will delete ALL registrations and spots. Continue?')) return;
+      const res = await fetch(`${API}/admin/reset-all`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminKey: keyInput.value })
+      });
+      const data = await res.json();
+      message.textContent = data.success ? '✅ All registrations and spots cleared.' : `❌ ${data.error || 'Failed'}`;
+      showPasswordsEnabled = false;
+      passcodeData = {};
+      loadRoster();
+    }
+
+    function enablePasswords() {
+      if (!adminKeyValid) return;
+      showPasswordsEnabled = true;
+      passcodeData = {}; // clear previous
+      message.textContent = '🔓 Passwords enabled. Tap on names to see.';
+      loadRoster();
+    }
+
+    async function addNewMember() {
+      if (!adminKeyValid) return;
+      const names = prompt('Enter name(s), comma‑separated:');
+      if (!names) return;
+      const res = await fetch(`${API}/admin/add-names`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminKey: keyInput.value, names })
       });
       const data = await res.json();
       if (data.success) {
-        msg.textContent = `✅ Test players added: ${data.added.map(p => p.name + ' ' + p.status).join(', ')}`;
-        // Automatically refresh roster
-        setTimeout(loadRoster, 500);
+        message.textContent = `✅ Added: ${data.added.join(', ') || 'none new'}`;
       } else {
-        msg.textContent = `❌ ${data.error || 'Failed'}`;
+        message.textContent = `❌ ${data.error || 'Failed'}`;
       }
+      loadRoster();
     }
+
+    async function removePlayer(name) {
+      if (!adminKeyValid) return;
+      if (!confirm(`Remove registration for ${name}? This will free the name.`)) return;
+      const res = await fetch(`${API}/admin/remove-registration`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminKey: keyInput.value, name })
+      });
+      const data = await res.json();
+      if (data.success) {
+        message.textContent = `✅ ${name} removed.`;
+      } else {
+        message.textContent = `❌ ${data.error || 'Failed'}`;
+      }
+      loadRoster();
+    }
+
+    // Initial load
+    loadRoster();
+    // Re-check key on input
+    keyInput.addEventListener('input', () => { checkKey(); if (adminKeyValid) loadRoster(); });
   </script>
 </body>
 </html>
