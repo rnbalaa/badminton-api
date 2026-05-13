@@ -24,11 +24,10 @@ const VALID_NAMES = [
 ];
 
 const ADMIN_KEY = 'bundbppgmbh';
-const MAX_RECLAIMS = 3;   // after 3 reclaims, block further reclaims
+const MAX_RECLAIMS = 3;
 
 app.use(express.static('public'));
 
-// Auto‑create poll
 currentPoll = {
   title: 'Test Poll (auto-created)',
   capacity: 8,
@@ -68,7 +67,6 @@ app.get('/', (req, res) => {
 
 // ==================== POLLING ====================
 
-// Helper to reset reclaim counters (called when a new poll is created)
 function resetReclaimCounters() {
   for (const token in voters) {
     voters[token].reclaimCount = 0;
@@ -110,7 +108,17 @@ app.get('/my-spot', (req, res) => {
   const cancelled = currentPoll.spots.find(s => s.voterToken === token && s.cancelledAt);
 
   if (active) return res.json({ hasSpot: true, status: 'active', name: active.voterName, claimedAt: active.claimedAt });
-  if (cancelled) return res.json({ hasSpot: true, status: 'cancelled', name: cancelled.voterName, cancelledAt: cancelled.cancelledAt });
+  if (cancelled) {
+    const voter = voters[token];
+    return res.json({
+      hasSpot: true,
+      status: 'cancelled',
+      name: cancelled.voterName,
+      cancelledAt: cancelled.cancelledAt,
+      reclaimCount: voter.reclaimCount,
+      maxReclaims: MAX_RECLAIMS
+    });
+  }
   return res.json({ hasSpot: false, status: 'none' });
 });
 
@@ -121,14 +129,12 @@ app.post('/claim-spot', (req, res) => {
 
   const voter = voters[token];
 
-  // Block if already holding an active spot
   if (currentPoll.spots.find(s => s.voterToken === token && !s.cancelledAt)) {
     return res.status(409).json({ error: 'You already have an active spot.' });
   }
 
   const hasCancelledBefore = currentPoll.spots.some(s => s.voterToken === token && s.cancelledAt);
   if (hasCancelledBefore) {
-    // Re‑claim attempt – check limit
     if (voter.reclaimCount >= MAX_RECLAIMS) {
       return res.status(403).json({ error: `You have reached the maximum of ${MAX_RECLAIMS} reclaims for this poll.` });
     }
@@ -144,7 +150,7 @@ app.post('/claim-spot', (req, res) => {
     reclaimed: hasCancelledBefore
   };
   currentPoll.spots.push(spot);
-  console.log(`✅ ${voter.name} claimed (reclaimed: ${hasCancelledBefore}, total reclaims: ${voter.reclaimCount})`);
+  console.log(`✅ ${voter.name} claimed (reclaimed: ${hasCancelledBefore}, reclaims: ${voter.reclaimCount})`);
   res.json({ success: true, spot });
 });
 
@@ -157,7 +163,6 @@ app.post('/cancel-spot', (req, res) => {
   if (!spot) return res.status(404).json({ error: 'You have no active spot to cancel.' });
   spot.cancelledAt = new Date().toISOString();
 
-  // Promote first waitlisted player
   const activeSpots = currentPoll.spots.filter(s => !s.cancelledAt);
   const capacity = currentPoll.capacity;
   for (let i = 0; i < activeSpots.length; i++) {
@@ -183,7 +188,6 @@ app.post('/admin/reset-all', (req, res) => {
   res.json({ success: true });
 });
 
-// List registered players (read‑only)
 app.get('/admin/registered', (req, res) => {
   const adminKey = req.query.key;
   if (adminKey !== ADMIN_KEY) return res.status(403).json({ error: 'Invalid admin key.' });
@@ -196,7 +200,7 @@ app.get('/admin/registered', (req, res) => {
   res.json({ registered });
 });
 
-// Add two test players (just register, no claim)
+// ADMIN: Add two test players AND auto‑claim a spot for each
 app.post('/admin/add-test-players', (req, res) => {
   const { adminKey } = req.body;
   if (adminKey !== ADMIN_KEY) return res.status(403).json({ error: 'Invalid admin key.' });
@@ -205,12 +209,23 @@ app.post('/admin/add-test-players', (req, res) => {
   for (const name of testNames) {
     if (claimedNames[name]) {
       added.push({ name, status: 'already exists' });
-    } else {
-      const token = crypto.randomUUID();
-      voters[token] = { name, isAdmin: false, reclaimCount: 0 };
-      claimedNames[name] = token;
-      added.push({ name, status: 'registered', token });
+      continue;
     }
+    const token = crypto.randomUUID();
+    voters[token] = { name, isAdmin: false, reclaimCount: 0 };
+    claimedNames[name] = token;
+    // Auto‑claim spot for the test player
+    if (currentPoll) {
+      currentPoll.spots.push({
+        voterToken: token,
+        voterName: name,
+        claimedAt: new Date().toISOString(),
+        cancelledAt: null,
+        promoted: false,
+        reclaimed: false
+      });
+    }
+    added.push({ name, status: 'registered & claimed' });
   }
   res.json({ success: true, added });
 });
