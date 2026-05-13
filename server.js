@@ -1,6 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const app = express();
+const VERSION = '0.5.1';
 
 app.use(express.json());
 app.use((req, res, next) => {
@@ -10,7 +11,7 @@ app.use((req, res, next) => {
 });
 
 // ===== IN-MEMORY STORE =====
-const voters = {};          // token -> { name, isAdmin, reclaimCount }
+const voters = {};          // token -> { name, isAdmin, reclaimCount, passcode }
 const claimedNames = {};    // name -> token
 let currentPoll = null;
 
@@ -20,7 +21,8 @@ const VALID_NAMES = [
   'Mohan', 'Prashant Steinbach', 'Prashant Konigstein', 'Pradeep', 'Shivanna',
   'Suhas', 'Vedha', 'Viraj', 'Vishwas', 'Venky', 'Vinay', 'Dummy22',
   'Dummy23', 'Dummy24', 'Dummy25',
-  'Test1','Test2','Test3','Test4','Test5','Test6','Test7','Test8','Test9','Test10','CancelTest'
+  'Test1','Test2','Test3','Test4','Test5','Test6','Test7','Test8','Test9','Test10','CancelTest',
+  'Guest01','Guest02','Guest03','Guest04'
 ];
 
 const ADMIN_KEY = 'bundbppgmbh';
@@ -46,7 +48,7 @@ app.post('/register', (req, res) => {
   if (!name || !VALID_NAMES.includes(name)) return res.status(400).json({ error: 'Invalid name.' });
   if (claimedNames[name]) return res.status(409).json({ error: 'Name already claimed.' });
   const token = crypto.randomUUID();
-  voters[token] = { name, isAdmin: false, reclaimCount: 0 };
+  voters[token] = { name, isAdmin: false, reclaimCount: 0, passcode: null };
   claimedNames[name] = token;
   res.json({ token, name });
 });
@@ -58,7 +60,7 @@ app.get('/voter', (req, res) => {
 });
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'Badminton Poll API v0.4', voters: Object.keys(voters).length });
+  res.json({ status: 'Badminton Poll API', version: VERSION, voters: Object.keys(voters).length });
 });
 
 app.get('/', (req, res) => {
@@ -194,7 +196,8 @@ app.get('/admin/registered', (req, res) => {
   const registered = Object.entries(voters).map(([token, info]) => ({
     name: info.name,
     isAdmin: info.isAdmin,
-    reclaims: info.reclaimCount || 0
+    reclaims: info.reclaimCount || 0,
+    passcode: info.passcode   // now included (may be null)
   }));
   registered.sort((a, b) => a.name.localeCompare(b.name));
   res.json({ registered });
@@ -212,9 +215,9 @@ app.post('/admin/add-test-players', (req, res) => {
       continue;
     }
     const token = crypto.randomUUID();
-    voters[token] = { name, isAdmin: false, reclaimCount: 0 };
+    voters[token] = { name, isAdmin: false, reclaimCount: 0, passcode: null };
     claimedNames[name] = token;
-    // Auto‑claim spot for the test player
+    // Auto‑claim spot
     if (currentPoll) {
       currentPoll.spots.push({
         voterToken: token,
@@ -230,5 +233,50 @@ app.post('/admin/add-test-players', (req, res) => {
   res.json({ success: true, added });
 });
 
+// ADMIN: Remove a player's registration (free the name)
+app.post('/admin/remove-registration', (req, res) => {
+  const { adminKey, name } = req.body;
+  if (adminKey !== ADMIN_KEY) return res.status(403).json({ error: 'Invalid admin key.' });
+  if (!name || !claimedNames[name]) return res.status(400).json({ error: 'Name not found.' });
+  const token = claimedNames[name];
+  delete voters[token];
+  delete claimedNames[name];
+  // Also remove any spots for this voter from current poll (if any)
+  if (currentPoll) {
+    currentPoll.spots = currentPoll.spots.filter(s => s.voterToken !== token);
+  }
+  console.log(`🗑️ Removed registration for ${name}`);
+  res.json({ success: true });
+});
+
+// ADMIN: Add new member names (comma-separated) to the valid names list
+app.post('/admin/add-names', (req, res) => {
+  const { adminKey, names } = req.body;
+  if (adminKey !== ADMIN_KEY) return res.status(403).json({ error: 'Invalid admin key.' });
+  if (!names || typeof names !== 'string') return res.status(400).json({ error: 'Names string required.' });
+  const nameList = names.split(',').map(n => n.trim()).filter(n => n);
+  const added = [];
+  for (const name of nameList) {
+    if (!VALID_NAMES.includes(name)) {
+      VALID_NAMES.push(name);
+      added.push(name);
+    }
+  }
+  console.log(`➕ Added names: ${added.join(', ')}`);
+  res.json({ success: true, added });
+});
+
+// ADMIN: Get passcodes for all voters (admin only)
+app.get('/admin/passcodes', (req, res) => {
+  const adminKey = req.query.key;
+  if (adminKey !== ADMIN_KEY) return res.status(403).json({ error: 'Invalid admin key.' });
+  const passcodes = Object.entries(voters).map(([token, info]) => ({
+    name: info.name,
+    passcode: info.passcode || null
+  }));
+  passcodes.sort((a, b) => a.name.localeCompare(b.name));
+  res.json({ passcodes });
+});
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🏸 Poll API running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🏸 Poll API v${VERSION} running on port ${PORT}`));
